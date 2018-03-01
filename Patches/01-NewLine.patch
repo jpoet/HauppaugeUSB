@@ -1,0 +1,2103 @@
+Skip NL changes
+
+From: John Poet <jpoet@mythtv.org>
+
+
+---
+ Common/EncoderDev/HAPIHost/CHapi.cpp    |  674 ++++++++++++++++---------------
+ Common/EncoderDev/HAPIHost/HwapiUsb.cpp |  140 +++---
+ 2 files changed, 407 insertions(+), 407 deletions(-)
+
+diff --git a/Common/EncoderDev/HAPIHost/CHapi.cpp b/Common/EncoderDev/HAPIHost/CHapi.cpp
+index 2a01693..c18aef7 100644
+--- a/Common/EncoderDev/HAPIHost/CHapi.cpp
++++ b/Common/EncoderDev/HAPIHost/CHapi.cpp
+@@ -16,15 +16,15 @@
+ 
+ #include "CHapi.h"
+ 
+-#ifdef OLD_DRIVER
++#ifdef OLD_DRIVER
+ //#include "Device.h"
+ #include "DataTransfer.h"
+-#else
+-#include "AVOutput.h"
+-#endif
++#else
++#include "AVOutput.h"
++#endif
+ 
+ 
+-#include "mchip_utils.h"
++#include "mchip_utils.h"
+ #include "HwapiUsb.h"
+ #include "HapiMsg.h"
+ //#include "usb_defines.h"
+@@ -562,14 +562,14 @@ static Param_Bitmask_Item TranscodeParamBitmaskTable[] =
+ 	{"DeblockFilter",	(Uint32 *)&gParam.params.transcodeParam.VideoParams.bitMask,	HWAPI_BM_MSG_TRANSCODE_DEBLOCK_FILTER},
+ 	{"NumBFrames",		(Uint32 *)&gParam.params.transcodeParam.VideoParams.bitMask,	HWAPI_BM_MSG_TRANSCODE_NUM_BFRAMENUM},
+     {"bIasIDR",         (Uint32 *)&gParam.params.transcodeParam.VideoParams.bitMask,    HWAPI_BM_MSG_TRANSCODE_BIASIDR},
+-
++
+     {"PMTVersion",               (Uint32 *)&gParam.params.transcodeParam.VideoParams.bitMask,    HWAPI_BM_MSG_TRANSCODE_PMT_VERSION},
+     {"bAdaptiveSmoothing",       (Uint32 *)&gParam.params.transcodeParam.VideoParams.bitMask,    HWAPI_BM_MSG_TRANSCODE_BSMOOTHING},
+     {"HorizontalSmoothingOffset",(Uint32 *)&gParam.params.transcodeParam.VideoParams.bitMask,    HWAPI_BM_MSG_TRANSCODE_HSMOOTHOFF},
+     {"VerticalSmoothingOffset",  (Uint32 *)&gParam.params.transcodeParam.VideoParams.bitMask,    HWAPI_BM_MSG_TRANSCODE_VSMOOTHOFF},
+     {"GOPSize",                  (Uint32 *)&gParam.params.transcodeParam.VideoParams.bitMask,    HWAPI_BM_MSG_TRANSCODE_GOPSIZE},
+ #endif
+-
++
+ 	{"AudioCodecInputFormat",	(Uint32 *)&gParam.params.transcodeParam.AudioParams.bitMask,	HWAPI_BM_MSG_TRANSCODE_AUDIO_CODEC_INPUT_FORMAT},
+ 	{"AudioOutputMode",			(Uint32 *)&gParam.params.transcodeParam.AudioParams.bitMask,	HWAPI_BM_MSG_TRANSCODE_AUDIO_OUTPUT_MODE},
+ 	{"AudioOutputSamplingRate",	(Uint32 *)&gParam.params.transcodeParam.AudioParams.bitMask,	HWAPI_BM_MSG_TRANSCODE_AUDIO_OUTPUT_SAMP_RATE},
+@@ -584,15 +584,15 @@ static Param_Bitmask_Item TranscodeParamBitmaskTable[] =
+ #endif
+     {"bAGCEnable",           (Uint32 *)&gParam.params.transcodeParam.AudioParams.bitMask,    HWAPI_BM_MSG_TRANSCODE_AUDIO_AGC_ENABLE},
+     {"AudioMaxSample",          (Uint32 *)&gParam.params.transcodeParam.AudioParams.bitMask,    HWAPI_BM_MSG_TRANSCODE_AUDIO_MAXSAMPLE},
+-
++
+ #ifndef DRIVER_BUILD
+ 	{"MaxParams",&MaxParams, 0}//must be added at the end of the table
+ #else
+ 	{"MaxParams", NULL, 0}//must be added at the end of the table
+ #endif
+ };
+-
+-
++
++
+ 
+ CHapi::CHapi(USBBootMChip_t *pmchip) :
+ _p_data_transfer(NULL),
+@@ -618,7 +618,7 @@ _logo_x_pos(-1),
+ _logo_y_pos(-1),
+ _serialNo(0)
+ {
+-	DbgLogInfo(("CHapi::CHapi(p_mchip=%p)\n", p_mchip));
++	DbgLogInfo(("CHapi::CHapi(p_mchip=%p)\n", p_mchip));
+ 
+ 	wrapMutexInit(&_mutex);
+ 
+@@ -639,7 +639,7 @@ _serialNo(0)
+ 	_bling_count = 0;
+ 
+ 	gBoard_bus = siena;//plankton
+-	hcwGetRegistryDWORD("gBoard_bus", (LPDWORD)&gBoard_bus);
++	hcwGetRegistryDWORD("gBoard_bus", (LPDWORD)&gBoard_bus);
+ 
+ 	memset(&m_extcapParams, 0, sizeof(m_extcapParams)); //reset Scaler, AudioEncoder APIs
+ 	m_extcapParams.audioEncoder.sample_rate_441 = AUDIO_SAMPLE_RATE_44100;
+@@ -707,7 +707,7 @@ bool CHapi::powerUp()
+ 	if(gHapi && hapiErr == HAPI_SUCCESS)
+ 		HapiFWBoot();
+ 	if(gHapi && hapiErr == HAPI_SUCCESS){
+-		DbgLogInfo(("CHapi::powerUp() returns TRUE, gHapi=%p\n", gHapi));
++		DbgLogInfo(("CHapi::powerUp() returns TRUE, gHapi=%p\n", gHapi));
+ #ifdef HAPI_POWER_THREAD
+ 		_powered_up = TRUE;
+ #if DBG//allow us to change delay "on the fly" during debuging
+@@ -724,7 +724,7 @@ bool CHapi::powerUp()
+ 		return TRUE;
+ 	}
+ 	powerDownHW();
+-	DbgLogInfo(("CHapi::powerUp() returns FALSE\n"));
++	DbgLogInfo(("CHapi::powerUp() returns FALSE\n"));
+ 	unlock();
+ 	return FALSE;
+ }
+@@ -737,11 +737,11 @@ void CHapi::powerDown()
+ 	_isStarted = false;
+ 
+ #ifdef HAPI_POWER_THREAD
+-	DbgLogInfo(("CHapi::powerDown() _powered_up=%x\n", _powered_up));
++	DbgLogInfo(("CHapi::powerDown() _powered_up=%x\n", _powered_up));
+ 	if(_powered_up){
+ 		_powered_up = FALSE;
+ 		if(hapiErr == HAPI_SUCCESS && _API_ok && !p_mchip->hadUsbError("CHapi::powerDown()")){
+-			DbgLogInfo(("CHapi::powerDown() waiting for %dsecs ...\n", _power_down_delay));
++			DbgLogInfo(("CHapi::powerDown() waiting for %dsecs ...\n", _power_down_delay));
+ 			if(_power_down_delay){
+ 				unlock();
+ 				return; //we will get called again when the time limit expires ...
+@@ -763,9 +763,9 @@ void CHapi::powerDown()
+ void CHapi::powerDownHW()
+ {
+ 	DbgLogInfo(("CHapi::powerDownHW() gHapi=%p\n", gHapi));
+-#ifdef HAPI_POWER_THREAD
++#ifdef HAPI_POWER_THREAD
+ 	_powered_up = FALSE;
+-#endif
++#endif
+ 	HapiExit();
+ 
+ 	_logo_mod_time = 0;
+@@ -781,14 +781,14 @@ void CHapi::powerDownHW()
+ 
+ 	BYTE PortEvalue = 0;
+ 	if(!p_mchip->UsbGetPortState(4, &PortEvalue)){
+-		DbgLogError(("CHapi::powerDownHW() UsbGetPortState() FAILED!!\n"));
++		DbgLogError(("CHapi::powerDownHW() UsbGetPortState() FAILED!!\n"));
+ 	}
+ 	PortEvalue |= 0x4; //disable Video bus to Magnum (DXT_VID_EN#=1)
+ 	PortEvalue |= 0x1; //disable I2C bus to Magnum (DXT_PATH_EN=1)
+ 	p_mchip->UsbSetPortState(4, PortEvalue);
+ 
+-	DbgLogInfo((" (disable bus to Encoder, DXT_VID_EN#=1)\n"));
+-	DbgLogInfo((" Cypress Port %d=0x%02x\n", 4, PortEvalue));
++	DbgLogInfo((" (disable bus to Encoder, DXT_VID_EN#=1)\n"));
++	DbgLogInfo((" Cypress Port %d=0x%02x\n", 4, PortEvalue));
+ 
+ 	//FGR - need to reset CS5340 at this point; due to switching of clocks
+ 	p_mchip->resetCs5340();
+@@ -828,10 +828,10 @@ bool CHapi::DeviceIsReady()
+ void CHapi::HapiAPIInit()
+ {
+ 	_API_ok = false;
+-	DbgLogInfo(("HapiAPIInit()\n"));
++	DbgLogInfo(("HapiAPIInit()\n"));
+ 
+ 	if(gHWapiHandle || gHapi){
+-		DbgLogError(("HapiAPIInit() gHWapiHandle=%p gHapi=%p\n"));
++		DbgLogError(("HapiAPIInit() gHWapiHandle=%p gHapi=%p\n"));
+ 		hapiErr = HAPI_FAIL;
+ 		return;
+ 	}
+@@ -864,9 +864,9 @@ void CHapi::HapiAPIInit()
+ 	gHwPortConfig.usb_port_config.dxt_clk = DXT_CLK_48;   //set default value is 48MHz
+ 	gHwPortConfig.usb_port_config.p_mchip = p_mchip;
+ 
+-	DbgLogInfo(("Calling HAPI_commBusInit\n"));
++	DbgLogInfo(("Calling HAPI_commBusInit\n"));
+ 	gHWapiHandle = HAPI_commBusInit(0, gCommBusType, &gHapiFunc, &gHwPortConfig);
+-	DbgLogInfo((" HAPI_commBusInit gHWapiHandle=%p\n", gHWapiHandle));
++	DbgLogInfo((" HAPI_commBusInit gHWapiHandle=%p\n", gHWapiHandle));
+ 
+ 	if(gHWapiHandle){
+ 		memset(&gInitParam, 0, sizeof(gInitParam));
+@@ -877,9 +877,9 @@ void CHapi::HapiAPIInit()
+ 		gInitParam.dataBus = gHWapiHandle; // Data bus is the same as the Command bus.
+ 		
+ 		memset(&boardInfo,0,sizeof(BOARD_INFO));
+-		DbgLogInfo((" Calling HAPI_GetBoardInfo\n"));
++		DbgLogInfo((" Calling HAPI_GetBoardInfo\n"));
+ 		hapiErr = HAPI_GetBoardInfo(gHWapiHandle, &boardInfo);
+-		DbgLogInfo((" HAPI_GetBoardInfo hapiErr=0x%x\n", hapiErr));
++		DbgLogInfo((" HAPI_GetBoardInfo hapiErr=0x%x\n", hapiErr));
+ 
+ 		// Below code initializes BKV configuration parameters.
+ 		{
+@@ -887,13 +887,13 @@ void CHapi::HapiAPIInit()
+ 			{
+ 				if( boardInfo.dxt_clk != DXT_CLK_24)
+ 				{
+-					DbgLogInfo(("LP mode 48!\n"));
++					DbgLogInfo(("LP mode 48!\n"));
+ 					//MCHIP_DRAM_BKV_Load(MCHIP_BKV_INITIAL_LP_48,&gInitParam.bkvConfig);					
+ 					memcpy(&gInitParam.bkvConfig, &BKV_375CL6_335T_285SYS_1P_MCHIPA3_LV_NOODT, sizeof(MCHIP_DRAM_BKV));
+ 				}
+ 				else
+ 				{
+-					DbgLogInfo(("LP mode 24!\n"));
++					DbgLogInfo(("LP mode 24!\n"));
+ 					//MCHIP_DRAM_BKV_Load(MCHIP_BKV_INITIAL_LP_24,&gInitParam.bkvConfig);
+ 					memcpy(&gInitParam.bkvConfig, &BKV_24_375CL6_335T_285_12SYS_1P_DXTA3_LV_NOODT_v5, sizeof(MCHIP_DRAM_BKV));
+ 				}
+@@ -901,14 +901,14 @@ void CHapi::HapiAPIInit()
+ 			else if ((strncmp(boardInfo.boardID, "Plankton_T", 10) == 0)&&
+ 					(strncmp(boardInfo.mainCPU, "DX6215-T", 8) == 0))     //Turbo board
+ 			{
+-				DbgLogInfo(("Turbo mode!\n"));
++				DbgLogInfo(("Turbo mode!\n"));
+ 				//MCHIP_DRAM_BKV_Load(MCHIP_BKV_INITIAL_TURBO,&gInitParam.bkvConfig);
+ 				memcpy(&gInitParam.bkvConfig, &BKV_24_320SYS_400DDR_CL6_DXTA3_LV_NOODT_v1, sizeof(MCHIP_DRAM_BKV));
+ 			}
+ 			else if((strncmp(boardInfo.boardID, "Plankton_C", 10) == 0)&&
+ 				(strncmp(boardInfo.mainCPU, "DX6225-C", 8) == 0))
+ 			{
+-				DbgLogInfo(("DXT-C mode!\n"));
++				DbgLogInfo(("DXT-C mode!\n"));
+ 				//MCHIP_DRAM_BKV_Load(MCHIP_BKV_INITIAL_DXT_C,&gInitParam.bkvConfig);
+ 				memcpy(&gInitParam.bkvConfig, &BKV_24_285_12CL6_400T_SYS_1P_DXTA3_LV_NOODT_v1, sizeof(MCHIP_DRAM_BKV));
+ 			}
+@@ -1019,13 +1019,13 @@ void CHapi::HapiAPIInit()
+ 		DbgLogInfo((" Calling HAPI_Init\n"));
+ 		gHapi = NULL;
+ 		hapiErr = HAPI_Init(&gHapi, &gInitParam);
+-		DbgLogInfo((" HAPI_Init gHapi=%p hapiErr=0x%x\n", gHapi, hapiErr));
++		DbgLogInfo((" HAPI_Init gHapi=%p hapiErr=0x%x\n", gHapi, hapiErr));
+ 
+ 		if(hapiErr == HAPI_SUCCESS){
+ 			Uint32 gEndianSwap = 1;
+-			DbgLogInfo((" Calling HAPI_SetEndianSwap\n"));
++			DbgLogInfo((" Calling HAPI_SetEndianSwap\n"));
+ 			hapiErr = HAPI_SetEndianSwap(gHapi, gEndianSwap);
+-			DbgLogInfo((" HAPI_SetEndianSwap hapiErr=0x%x\n", hapiErr));
++			DbgLogInfo((" HAPI_SetEndianSwap hapiErr=0x%x\n", hapiErr));
+ 		
+ 		}
+ 	}
+@@ -1033,7 +1033,7 @@ void CHapi::HapiAPIInit()
+ 
+ void CHapi::HapiFWDownload()
+ {
+-	DbgLogInfo(("HapiFWDownload() gHapi=%p\n", gHapi));
++	DbgLogInfo(("HapiFWDownload() gHapi=%p\n", gHapi));
+ 
+ 	if(gHapi){
+ 		//parse_binary_address(MIPS_ADDR, &gFirmwareFile.mipsBaseAddr, &gFirmwareFile.mipsEntryAddr);
+@@ -1053,7 +1053,7 @@ void CHapi::HapiFWDownload()
+ 
+ //FGR - BUGBUG needs to use Plankton FW for transcode; llama for encode!!
+ 		gFirmwareFile.sparcFileName  = "llama_usb_vx_host_slave_t22_24.bin";
+-#if 0
++#if 0
+ 		if(gBoard_bus != plankton){
+ 			if( boardInfo.dxt_clk != DXT_CLK_24){
+ 				gFirmwareFile.sparcFileName = "llama_usb_vx_host_slave_t22_48.bin";
+@@ -1076,31 +1076,31 @@ void CHapi::HapiFWDownload()
+ //				gFirmwareFile.sparcFileName = "\\systemroot\\system32\\drivers\\HcwE5XC_t22_24.bin";
+ 			}
+ 		}
+-#endif
++#endif
+ 
+ 		gFirmwareFile.sparcBaseAddr  = 0x00c05000;
+ 		gFirmwareFile.sparcEntryAddr = 0x00c05000;
+ 
+-		DbgLogInfo((" Calling HAPI_FWDownload\n"));
++		DbgLogInfo((" Calling HAPI_FWDownload\n"));
+ 		hapiErr = HAPI_FWDownload(gHapi, &gFirmwareFile);
+-		DbgLogInfo((" HAPI_FWDownload hapiErr=0x%x\n", hapiErr));
++		DbgLogInfo((" HAPI_FWDownload hapiErr=0x%x\n", hapiErr));
+ 	}
+ }
+ 
+ void CHapi::HapiFWBoot()
+ {
+-	DbgLogInfo(("HapiFWBoot() gHapi=%p hapiErr=%d\n", gHapi, hapiErr));
++	DbgLogInfo(("HapiFWBoot() gHapi=%p hapiErr=%d\n", gHapi, hapiErr));
+ 	if(gHapi == NULL){
+-		DbgLogError(("CHapi::HapiFWBoot() gHapi==NULL!!\n"));
++		DbgLogError(("CHapi::HapiFWBoot() gHapi==NULL!!\n"));
+ 		return;
+ 	}
+ 	BYTE PortEvalue = 0;
+ 
+ 	if(hapiErr == HAPI_SUCCESS){
+-		DbgLogInfo((" Calling HAPI_BoardBootup gBoard_bus=%d\n", gBoard_bus));
++		DbgLogInfo((" Calling HAPI_BoardBootup gBoard_bus=%d\n", gBoard_bus));
+ 		p_mchip->resetWFMode();
+ 		hapiErr = HAPI_BoardBootup(gHapi, &gBootConfig[gBoard_bus]);
+-		DbgLogInfo((" HAPI_BoardBootup hapiErr=0x%x\n", hapiErr));
++		DbgLogInfo((" HAPI_BoardBootup hapiErr=0x%x\n", hapiErr));
+ 	}
+ 	
+ 	DWORD SetAVLtype = (gBoard_bus != plankton)?1:0;
+@@ -1109,7 +1109,7 @@ void CHapi::HapiFWBoot()
+ 		{//note that cant enable DXT_PATH_EN before FW booted
+ 			p_mchip->lock();
+ 			if(!p_mchip->UsbGetPortState(4, &PortEvalue)){
+-				DbgLogError(("CHapi::HapiFWBoot() UsbGetPortState() FAILED@%d!!\n", __LINE__));
++				DbgLogError(("CHapi::HapiFWBoot() UsbGetPortState() FAILED@%d!!\n", __LINE__));
+ 				p_mchip->unlock();
+ 				return;
+ 			}
+@@ -1125,25 +1125,25 @@ void CHapi::HapiFWBoot()
+ 				PortEvalue |= (BYTE)DXT_PATH_EN;
+ 			}
+ 			p_mchip->UsbSetPortState(4, PortEvalue);
+-			DbgLogInfo((" Cypress Port %d=0x%02x\n", 4, PortEvalue));
+-			DbgLogInfo(("   video bus to Encoder, DXT_VID_EN#=%d)\n", (PortEvalue&0x04)?1:0));
+-			DbgLogInfo(("   I2C bus to Encoder, DXT_PATH_EN#=%d)\n", PortEvalue&0x01));
+-
++			DbgLogInfo((" Cypress Port %d=0x%02x\n", 4, PortEvalue));
++			DbgLogInfo(("   video bus to Encoder, DXT_VID_EN#=%d)\n", (PortEvalue&0x04)?1:0));
++			DbgLogInfo(("   I2C bus to Encoder, DXT_PATH_EN#=%d)\n", PortEvalue&0x01));
++
+ 			//FGR - need to reset CS5340 at this point; due to switching of clocks
+ 			p_mchip->resetCs5340();
+-
++
+ 			p_mchip->unlock();
+ 		}
+ 		if(SetAVLtype == 1){
+-			DbgLogInfo((" Calling HAPI_SetAVLDriver (disable AVL)\n"));
++			DbgLogInfo((" Calling HAPI_SetAVLDriver (disable AVL)\n"));
+ 			if((PortEvalue & 0x01) == 0){
+-				DbgLogError((" Disabling AVL with DXT_PATH_EN=0\n"));
++				DbgLogError((" Disabling AVL with DXT_PATH_EN=0\n"));
+ 			}
+ 			hapiErr = HAPI_SetAVLDriver(gHapi, &AvlOffParam);
+ 		} else if(SetAVLtype >= 2){
+-			DbgLogInfo((" Calling HAPI_SetAVLDriver (enable siena AVL)\n"));
++			DbgLogInfo((" Calling HAPI_SetAVLDriver (enable siena AVL)\n"));
+ 			if((PortEvalue & 0x01) == 1){
+-				DbgLogError((" Enabling AVL with DXT_PATH_EN=1\n"));
++				DbgLogError((" Enabling AVL with DXT_PATH_EN=1\n"));
+ 			}
+ 			if(SetAVLtype > 2){
+ 				hapiErr = HAPI_SetAVLDriver(gHapi, &AvlSienaParam2);
+@@ -1151,16 +1151,16 @@ void CHapi::HapiFWBoot()
+ 				hapiErr = HAPI_SetAVLDriver(gHapi, &AvlSienaParam);
+ 			}
+ 		}
+-		DbgLogInfo((" HAPI_SetAVLDriver hapiErr=0x%x\n", hapiErr));
++		DbgLogInfo((" HAPI_SetAVLDriver hapiErr=0x%x\n", hapiErr));
+ #if DBG
+ //		wrapSleep_ms(1000);
+ #endif
+ 	}
+ 
+ 	if(hapiErr == HAPI_SUCCESS){
+-		DbgLogInfo((" Calling HAPI_AVDataCallbackInstall\n"));
++		DbgLogInfo((" Calling HAPI_AVDataCallbackInstall\n"));
+ 		hapiErr = HAPI_AVDataCallbackInstall(gHapi, &gCallbackFunc);
+-		DbgLogInfo((" HAPI_AVDataCallbackInstall hapiErr=0x%x\n", hapiErr));
++		DbgLogInfo((" HAPI_AVDataCallbackInstall hapiErr=0x%x\n", hapiErr));
+ #if DBG
+ //		wrapSleep_ms(1000);
+ #endif
+@@ -1168,9 +1168,9 @@ void CHapi::HapiFWBoot()
+ 
+ #if 1
+ 	if(hapiErr == HAPI_SUCCESS){
+-		DbgLogInfo((" Calling HAPI_ErrorMsgCallbackInstall\n"));
++		DbgLogInfo((" Calling HAPI_ErrorMsgCallbackInstall\n"));
+         hapiErr = HAPI_ErrorMsgCallbackInstall(gHapi, CHapi::ErrorMsgCallback);
+-		DbgLogInfo((" HAPI_ErrorMsgCallbackInstall hapiErr=0x%x\n", hapiErr));
++		DbgLogInfo((" HAPI_ErrorMsgCallbackInstall hapiErr=0x%x\n", hapiErr));
+ 	}
+ #endif			
+ #if DBG
+@@ -1180,13 +1180,13 @@ void CHapi::HapiFWBoot()
+ 
+ void CHapi::HapiExit()
+ {
+-	DbgLogInfo(("HapiExit() gHWapiHandle=%p gHapi=%p hapiErr=%d\n", gHWapiHandle, gHapi, hapiErr));
++	DbgLogInfo(("HapiExit() gHWapiHandle=%p gHapi=%p hapiErr=%d\n", gHWapiHandle, gHapi, hapiErr));
+ 	_API_ok = false;
+ 
+ 	if(gHapi){
+-		DbgLogInfo((" Calling HAPI_Exit(%p)\n", gHapi));
++		DbgLogInfo((" Calling HAPI_Exit(%p)\n", gHapi));
+ 		hapiErr = HAPI_Exit(gHapi);
+-		DbgLogInfo((" HAPI_Exit() hapiErr=0x%x\n", hapiErr));
++		DbgLogInfo((" HAPI_Exit() hapiErr=0x%x\n", hapiErr));
+ 
+ 		gHapi = NULL;
+ 	}
+@@ -1231,12 +1231,12 @@ Uint32 CHapi::HapiAspectSet(HAPI_ASPECT_RATIO ar)
+ {
+ 	lock();
+ 	if(!_API_ok){
+-		DbgLogWarn(("CHapi::HapiAspectSet() _API_ok==false!!\n"));
++		DbgLogWarn(("CHapi::HapiAspectSet() _API_ok==false!!\n"));
+ 		unlock();
+ 		return 0;
+ 	}
+ 	if(gHapi == NULL){
+-		DbgLogError(("CHapi::HapiAspectSet() gHapi==NULL!!\n"));
++		DbgLogError(("CHapi::HapiAspectSet() gHapi==NULL!!\n"));
+ 		unlock();
+ 		return 0;
+ 	}
+@@ -1259,7 +1259,7 @@ Uint32 CHapi::HapiAspectSet(HAPI_ASPECT_RATIO ar)
+ 
+ 	hapiErr = HAPI_ARSet(gHapi, 0, ar);
+ 	if(hapiErr != HAPI_SUCCESS){
+-		DbgLogWarn((" HAPI_ARSet hapiErr=0x%x\n", hapiErr));
++		DbgLogWarn((" HAPI_ARSet hapiErr=0x%x\n", hapiErr));
+ 		unlock();
+ 		return 0;
+ 	}
+@@ -1273,7 +1273,7 @@ Uint32 CHapi::HapiAspectSet(HAPI_ASPECT_RATIO ar)
+ Uint32 CHapi::HapiParamSet(HAPI_SET_PARAM *pParam)
+ {
+ 	if(pParam == NULL){
+-		DbgLogError(("CHapi::HapiParamSet(NULL)!!\n"));
++		DbgLogError(("CHapi::HapiParamSet(NULL)!!\n"));
+ 		return 0;
+ 	}
+ 	lock();
+@@ -1281,12 +1281,12 @@ Uint32 CHapi::HapiParamSet(HAPI_SET_PARAM *pParam)
+ 		hapiResetHW();
+ 	}
+ 	if(!_API_ok){
+-		DbgLogWarn(("CHapi::HapiParamSet() _API_ok==false!!\n"));
++		DbgLogWarn(("CHapi::HapiParamSet() _API_ok==false!!\n"));
+ 		unlock();
+ 		return 0;
+ 	}
+ 	if(gHapi == NULL){
+-		DbgLogError(("CHapi::HapiParamSet() gHapi==NULL!!\n"));
++		DbgLogError(("CHapi::HapiParamSet() gHapi==NULL!!\n"));
+ 		unlock();
+ 		return 0;
+ 	}
+@@ -1382,21 +1382,21 @@ Uint32 CHapi::HapiParamSet(HAPI_SET_PARAM *pParam)
+ Uint32 CHapi::HapiParamGet(HAPI_SET_PARAM *pParam)
+ {
+ 	if(pParam == NULL){
+-		DbgLogError(("CHapi::HapiParamGet(NULL)!!\n"));
++		DbgLogError(("CHapi::HapiParamGet(NULL)!!\n"));
+ 		return 0;
+ 	}
+ 	lock();
+ 	if(!_API_ok){
+-		DbgLogWarn(("CHapi::HapiParamGet() _API_ok==false!!\n"));
++		DbgLogWarn(("CHapi::HapiParamGet() _API_ok==false!!\n"));
+ 		unlock();
+ 		return 0;
+ 	}
+ 	if(gHapi == NULL){
+-		DbgLogError(("CHapi::HapiParamGet() gHapi==NULL!!\n"));
++		DbgLogError(("CHapi::HapiParamGet() gHapi==NULL!!\n"));
+ 		unlock();
+ 		return 0;
+ 	}
+-	DbgLogInfo((" Calling HAPI_ParamGet ParamType=%d\n", pParam->ParamType));
++	DbgLogInfo((" Calling HAPI_ParamGet ParamType=%d\n", pParam->ParamType));
+     
+ 	Uint32 savParamType = pParam->ParamType;
+ 	memset(pParam, 0, sizeof(*pParam));
+@@ -1412,7 +1412,7 @@ Uint32 CHapi::HapiParamGet(HAPI_SET_PARAM *pParam)
+ 		unlock();
+ 		return 1;
+ 	} else {
+-		DbgLogInfo((" HAPI_ParamGet hapiErr=0x%x\n", hapiErr));
++		DbgLogInfo((" HAPI_ParamGet hapiErr=0x%x\n", hapiErr));
+ 		unlock();
+ 		return 0;
+ 	}
+@@ -1424,7 +1424,7 @@ set parameter bitmask
+ */
+ void CHapi::set_param_bitmask(HAPI_SET_PARAM *pParam, const char* param_name)
+ {
+-//	DbgLogInfo(("set_param_bitmask(%p, %s) ParamType=%d\n", pParam, param_name, pParam->ParamType));
++//	DbgLogInfo(("set_param_bitmask(%p, %s) ParamType=%d\n", pParam, param_name, pParam->ParamType));
+ 	
+ 	Param_Bitmask_Item *p_bitmask = NULL;
+ 	
+@@ -1457,7 +1457,7 @@ void CHapi::set_param_bitmask(HAPI_SET_PARAM *pParam, const char* param_name)
+ 
+ Uint32 CHapi::get_param_bitmask(HAPI_SET_PARAM *pParam, const char* param_name)
+ {
+-//	DbgLogInfo(("get_param_bitmask(%p, %s) ParamType=%d\n", pParam, param_name, pParam->ParamType));
++//	DbgLogInfo(("get_param_bitmask(%p, %s) ParamType=%d\n", pParam, param_name, pParam->ParamType));
+ 	
+ 	Param_Bitmask_Item *p_bitmask = NULL;
+ 	
+@@ -1526,7 +1526,7 @@ void CHapi::clear_param_bitmasks(HAPI_SET_PARAM *pParam)
+ Uint32 CHapi::is_param_dirty(HAPI_SET_PARAM *pParam)
+ {
+ 	if(pParam->bitMask){
+-		DbgLogInfo(("is_param_dirty() pParam->bitMask=0x%x\n", pParam->bitMask));
++		DbgLogInfo(("is_param_dirty() pParam->bitMask=0x%x\n", pParam->bitMask));
+ 	}
+ 	if (pParam->ParamType == HAPI_SET_PARAM_TYPE_TRANSCODER)
+ 	{
+@@ -1534,13 +1534,13 @@ Uint32 CHapi::is_param_dirty(HAPI_SET_PARAM *pParam)
+ 			  | pParam->params.transcodeParam.AudioParams.bitMask
+ 			  | pParam->params.transcodeParam.VideoParams.bitMask
+ 			  | pParam->params.transcodeParam.LogParams.bitMask)){
+-			DbgLogInfo(("is_param_dirty(TRANSCODER)\n"));
+-			DbgLogInfo((" transcodeParam.bitMask=0x%x\n", pParam->params.transcodeParam.bitMask));
+-			DbgLogInfo((" transcodeParam.AudioParams.bitMask=0x%x\n", pParam->params.transcodeParam.AudioParams.bitMask));
+-			DbgLogInfo((" transcodeParam.VideoParams.bitMask=0x%x\n", pParam->params.transcodeParam.VideoParams.bitMask));
+-			DbgLogInfo((" transcodeParam.LogParams.bitMask=0x%x\n", pParam->params.transcodeParam.LogParams.bitMask));
++			DbgLogInfo(("is_param_dirty(TRANSCODER)\n"));
++			DbgLogInfo((" transcodeParam.bitMask=0x%x\n", pParam->params.transcodeParam.bitMask));
++			DbgLogInfo((" transcodeParam.AudioParams.bitMask=0x%x\n", pParam->params.transcodeParam.AudioParams.bitMask));
++			DbgLogInfo((" transcodeParam.VideoParams.bitMask=0x%x\n", pParam->params.transcodeParam.VideoParams.bitMask));
++			DbgLogInfo((" transcodeParam.LogParams.bitMask=0x%x\n", pParam->params.transcodeParam.LogParams.bitMask));
+ 		} else {
+-			DbgLogInfo(("is_param_dirty(TRANSCODER) == %x\n", pParam->bitMask));
++			DbgLogInfo(("is_param_dirty(TRANSCODER) == %x\n", pParam->bitMask));
+ 			return pParam->bitMask;
+ 		}
+ 		return (pParam->params.transcodeParam.bitMask
+@@ -1554,13 +1554,13 @@ Uint32 CHapi::is_param_dirty(HAPI_SET_PARAM *pParam)
+ 			  | pParam->params.encodeParam.AudioParams.bitMask
+ 			  | pParam->params.encodeParam.VideoParams.bitMask
+ 			  | pParam->params.encodeParam.LogParams.bitMask)){
+-			DbgLogInfo(("is_param_dirty(ENCODER)\n"));
+-			DbgLogInfo((" encodeParam.bitMask=0x%x\n", pParam->params.encodeParam.bitMask));
+-			DbgLogInfo((" encodeParam.AudioParams.bitMask=0x%x\n", pParam->params.encodeParam.AudioParams.bitMask));
+-			DbgLogInfo((" encodeParam.VideoParams.bitMask=0x%x\n", pParam->params.encodeParam.VideoParams.bitMask));
+-			DbgLogInfo((" encodeParam.LogParams.bitMask=0x%x\n", pParam->params.encodeParam.LogParams.bitMask));
++			DbgLogInfo(("is_param_dirty(ENCODER)\n"));
++			DbgLogInfo((" encodeParam.bitMask=0x%x\n", pParam->params.encodeParam.bitMask));
++			DbgLogInfo((" encodeParam.AudioParams.bitMask=0x%x\n", pParam->params.encodeParam.AudioParams.bitMask));
++			DbgLogInfo((" encodeParam.VideoParams.bitMask=0x%x\n", pParam->params.encodeParam.VideoParams.bitMask));
++			DbgLogInfo((" encodeParam.LogParams.bitMask=0x%x\n", pParam->params.encodeParam.LogParams.bitMask));
+ 		} else {
+-			DbgLogInfo(("is_param_dirty(ENCODER) == %x\n", pParam->bitMask));
++			DbgLogInfo(("is_param_dirty(ENCODER) == %x\n", pParam->bitMask));
+ 			return pParam->bitMask;
+ 		}
+ 		return (pParam->params.encodeParam.bitMask
+@@ -1577,7 +1577,7 @@ Uint32 CHapi::is_param_dirty(HAPI_SET_PARAM *pParam)
+ 		//pParam->params.decodeParam.VideoParams.bitMask = 0;
+ 		//pParam->params.decodeParam.LogParams.bitMask = 0;
+ 	}
+-	DbgLogError(("is_param_dirty(bad param type=%d) == %x\n", pParam->ParamType, pParam->bitMask));
++	DbgLogError(("is_param_dirty(bad param type=%d) == %x\n", pParam->ParamType, pParam->bitMask));
+ 	return pParam->bitMask;
+ }
+ 
+@@ -1595,7 +1595,7 @@ void CHapi::set_param(HAPI_SET_PARAM *pParam, const char* param_name, Uint32 val
+ 	strcpy(&param_dummy[1], param_name);
+ 	hcwGetRegistryDWORD(param_dummy, (LPDWORD)&value); //FGR BUGBUG - check for param override
+ 	if(value == 0xFFFF0000){
+-		DbgLogInfo(("set_param(%p, %s, %u) IGNORED due to registry setting\n", pParam, param_name, value, currentType));
++		DbgLogInfo(("set_param(%p, %s, %u) IGNORED due to registry setting\n", pParam, param_name, value, currentType));
+ 		return;
+ 	}
+ #endif
+@@ -1615,7 +1615,7 @@ void CHapi::set_param(HAPI_SET_PARAM *pParam, const char* param_name, Uint32 val
+ 		p_map = NULL;
+ 	}
+ 	if(p_map == NULL){
+-		DbgLogError(("set_param(%p,%s) p_map==NULL for ParamType=%d\n", pParam,  param_name, currentType));
++		DbgLogError(("set_param(%p,%s) p_map==NULL for ParamType=%d\n", pParam,  param_name, currentType));
+ 		return;
+ 	}
+     for(; p_map->addr != NULL; p_map++)
+@@ -1645,7 +1645,7 @@ void CHapi::set_param(HAPI_SET_PARAM *pParam, const char* param_name, Uint32 val
+ 			return;
+         }
+     }
+-	DbgLogError(("set_param(%p,%s) unknown param name for ParamType=%d\n", pParam,  param_name, pParam->ParamType));
++	DbgLogError(("set_param(%p,%s) unknown param name for ParamType=%d\n", pParam,  param_name, pParam->ParamType));
+ }
+ 
+ /*
+@@ -1663,7 +1663,7 @@ Uint32 CHapi::get_param(HAPI_SET_PARAM *pParam, const char* param_name)
+ 		p_map = NULL;
+ 	}
+ 	if(p_map == NULL){
+-		DbgLogError(("get_param(%p,%s) p_map==NULL for ParamType=%d\n", pParam,  param_name, pParam->ParamType));
++		DbgLogError(("get_param(%p,%s) p_map==NULL for ParamType=%d\n", pParam,  param_name, pParam->ParamType));
+ 		return -2;
+ 	}
+     //Special case, ParamType has no bitmask
+@@ -1671,7 +1671,7 @@ Uint32 CHapi::get_param(HAPI_SET_PARAM *pParam, const char* param_name)
+ 		return (Uint32)pParam->ParamType;
+ 	}
+ 	if(get_param_bitmask(pParam, param_name) == 0){
+-		DbgLogTrace(("get_param(%p,%s) bitmask not set, value is not valid\n", pParam,  param_name));
++		DbgLogTrace(("get_param(%p,%s) bitmask not set, value is not valid\n", pParam,  param_name));
+ 		return -1;
+ 	}
+     for(; p_map->addr != NULL; p_map++)
+@@ -1692,7 +1692,7 @@ Uint32 CHapi::get_param(HAPI_SET_PARAM *pParam, const char* param_name)
+             }	
+         }
+     }
+-	DbgLogError(("get_param(%p,'%s') unknown param name for ParamType=%d\n", pParam,  param_name, pParam->ParamType));
++	DbgLogError(("get_param(%p,'%s') unknown param name for ParamType=%d\n", pParam,  param_name, pParam->ParamType));
+ 	return -2;
+ }
+ 
+@@ -1940,7 +1940,7 @@ const char *CHapi::str_HAPI_AUDIO_CAPTURE_SOURCE(Uint32 value)
+ 
+ void CHapi::printParam(HAPI_SET_PARAM *pParam)
+ {
+-	DbgLogInfo(("printParam(%p)\n", pParam));
++	DbgLogInfo(("printParam(%p)\n", pParam));
+ 
+ 	Parameter_Map_Item *p_map = NULL;
+ 	if(pParam->ParamType == HAPI_SET_PARAM_TYPE_ENCODER){
+@@ -1951,7 +1951,7 @@ void CHapi::printParam(HAPI_SET_PARAM *pParam)
+ 		p_map = NULL;
+ 	}
+ 	if(p_map == NULL){
+-		DbgLogError(("printParam() p_map==NULL for ParamType=%d\n", pParam->ParamType));
++		DbgLogError(("printParam() p_map==NULL for ParamType=%d\n", pParam->ParamType));
+ 		return;
+ 	}
+     for(; p_map->addr != NULL; p_map++)
+@@ -2021,7 +2021,7 @@ void CHapi::printParam(HAPI_SET_PARAM *pParam)
+ 			DbgLogInfo(("%s:  %d=%s\n", p_map->str, value, str_HAPI_AUDIO_CAPTURE_SOURCE(value) )); break;
+ 
+ 		default:
+-			DbgLogInfo(("%s:  %d(0x%x)\n", p_map->str, *((Uint32 *)p), *((Uint32 *)p)));
++			DbgLogInfo(("%s:  %d(0x%x)\n", p_map->str, *((Uint32 *)p), *((Uint32 *)p)));
+ 		}
+ 
+ 	//0x16=HAPI_LATENCY 0x17=HAPI_VIDEO_ENTROPY_MODE 
+@@ -2035,7 +2035,7 @@ void CHapi::printParam(HAPI_SET_PARAM *pParam)
+ 
+ void CHapi::set_transcode_a7_1080i_to_h264_1920x544(HAPI_SET_PARAM *pParam)
+ {
+-	DbgLogInfo(("call set_transcode_a7_1080i_to_h264_1920x544()\n"));
++	DbgLogInfo(("call set_transcode_a7_1080i_to_h264_1920x544()\n"));
+ 
+ 	set_param(pParam, "ParamType" , 2);  // 0-encode, 1-decode, 2-transcode
+ 	
+@@ -2081,7 +2081,7 @@ void CHapi::set_transcode_a7_1080i_to_h264_1920x544(HAPI_SET_PARAM *pParam)
+ 
+ void CHapi::set_transcode_1080i_to_480i_h264(HAPI_SET_PARAM *pParam)
+ {
+-	DbgLogInfo(("call set_transcode_1080i_to_480i_h264()\n"));
++	DbgLogInfo(("call set_transcode_1080i_to_480i_h264()\n"));
+ 
+ 	set_param(pParam, "ParamType" , 2);  // 0-encode, 1-decode, 2-transcode
+ 
+@@ -2123,7 +2123,7 @@ void CHapi::set_transcode_1080i_to_480i_h264(HAPI_SET_PARAM *pParam)
+ 
+ void CHapi::set_encode_1080i60_h264(HAPI_SET_PARAM *pParam)
+ {
+-	DbgLogInfo(("call set_encode_1080i60_h264()\n"));
++	DbgLogInfo(("call set_encode_1080i60_h264()\n"));
+ 
+ 	set_param(pParam, "ParamType" , 0);  // 0-encode, 1-decode, 2-transcode
+ 
+@@ -2171,7 +2171,7 @@ void CHapi::set_encode_1080i60_h264(HAPI_SET_PARAM *pParam)
+ 
+ void CHapi::set_encode_1080p60_h264(HAPI_SET_PARAM *pParam)
+ {
+-	DbgLogInfo(("call set_encode_1080p60_h264()\n"));
++	DbgLogInfo(("call set_encode_1080p60_h264()\n"));
+ 
+ 	set_param(pParam, "ParamType" , 0);  // 0-encode, 1-decode, 2-transcode
+ 
+@@ -2219,7 +2219,7 @@ void CHapi::set_encode_1080p60_h264(HAPI_SET_PARAM *pParam)
+ 
+ void CHapi::set_encode_720p60_h264(HAPI_SET_PARAM *pParam)
+ {
+-	DbgLogInfo(("call set_encode_720p60_h264()\n"));
++	DbgLogInfo(("call set_encode_720p60_h264()\n"));
+ 
+ 	set_param(pParam, "ParamType" , 0);  // 0-encode, 1-decode, 2-transcode
+ 
+@@ -2267,7 +2267,7 @@ void CHapi::set_encode_720p60_h264(HAPI_SET_PARAM *pParam)
+ 
+ void CHapi::set_encode_480p60_h264(HAPI_SET_PARAM *pParam)
+ {
+-	DbgLogInfo(("call set_encode_480p60_h264()\n"));
++	DbgLogInfo(("call set_encode_480p60_h264()\n"));
+ 
+ 	set_param(pParam, "ParamType" , 0);  // 0-encode, 1-decode, 2-transcode
+ 
+@@ -2315,7 +2315,7 @@ void CHapi::set_encode_480p60_h264(HAPI_SET_PARAM *pParam)
+ 
+ void CHapi::set_encode_480i60_h264(HAPI_SET_PARAM *pParam)
+ {
+-	DbgLogInfo(("call set_encode_480i60_h264()\n"));
++	DbgLogInfo(("call set_encode_480i60_h264()\n"));
+ 
+ 	set_param(pParam, "ParamType" , 0);  // 0-encode, 1-decode, 2-transcode
+ 
+@@ -2372,7 +2372,7 @@ HANDLE CHapi::prv_open_file(char *filename, int mode, Uint32* size)
+     UNICODE_STRING u_file_name;
+ 
+ 	if((filename==NULL) || (size==NULL)){
+-        DbgLogError(("prv_open_file: filename(%p)==NULL || size(%p)==NULL\n", filename, size));
++        DbgLogError(("prv_open_file: filename(%p)==NULL || size(%p)==NULL\n", filename, size));
+         return NULL;
+ 	}
+ 	*size = 0;
+@@ -2439,15 +2439,15 @@ HANDLE CHapi::prv_open_file(char *filename, int mode, Uint32* size)
+ 
+ 		if (!NT_SUCCESS(status)) 
+ 		{ 
+-			DbgLogError(("prv_open_file: ZwQueryInformationFile failed with status 0x%x\n", status));
++			DbgLogError(("prv_open_file: ZwQueryInformationFile failed with status 0x%x\n", status));
+ 			return NULL;
+ 		} 
+ 
+ 		FileSize = FileInformation.EndOfFile.LowPart; 
+ 		*size = FileSize;
+-		DbgLogInfo(("prv_open_file: file is %d bytes\n", FileSize));
++		DbgLogInfo(("prv_open_file: file is %d bytes\n", FileSize));
+ 	}
+-	DbgLogInfo(("prv_open_file: file '%s' opened as %p\n", filename, fileHandle));
++	DbgLogInfo(("prv_open_file: file '%s' opened as %p\n", filename, fileHandle));
+ 	return fileHandle;
+ }
+ 
+@@ -2456,7 +2456,7 @@ ULONG_PTR CHapi::prv_read_file(HANDLE fileHandle, BYTE *buf, Uint32 size)
+     NTSTATUS status = STATUS_SUCCESS;
+     IO_STATUS_BLOCK status_block;
+ 
+-	DbgLogInfo(("prv_read_file: reading %d bytes from %p\n", size, fileHandle));
++	DbgLogInfo(("prv_read_file: reading %d bytes from %p\n", size, fileHandle));
+ 
+     status = ZwReadFile(
+             fileHandle,         //file handle
+@@ -2471,10 +2471,10 @@ ULONG_PTR CHapi::prv_read_file(HANDLE fileHandle, BYTE *buf, Uint32 size)
+         
+     if (!NT_SUCCESS(status)) 
+     { 
+-        DbgLogError(("prv_read_file: failed with status 0x%x\n", status));
++        DbgLogError(("prv_read_file: failed with status 0x%x\n", status));
+         return 0;
+     } 
+-//	DbgLogInfo(("prv_read_file: read %d bytes OK\n", status_block.Information));
++//	DbgLogInfo(("prv_read_file: read %d bytes OK\n", status_block.Information));
+ 	return status_block.Information;
+ }
+ 
+@@ -2483,7 +2483,7 @@ ULONG_PTR CHapi::prv_write_file(HANDLE fileHandle, BYTE *buf, Uint32 size)
+     NTSTATUS status = STATUS_SUCCESS;
+     IO_STATUS_BLOCK status_block;
+ 
+-	DbgLogInfo(("prv_write_file: writing %d bytes to %p\n", size, fileHandle));
++	DbgLogInfo(("prv_write_file: writing %d bytes to %p\n", size, fileHandle));
+ 
+     status = ZwWriteFile(
+             fileHandle,         //file handle
+@@ -2498,16 +2498,16 @@ ULONG_PTR CHapi::prv_write_file(HANDLE fileHandle, BYTE *buf, Uint32 size)
+         
+     if (!NT_SUCCESS(status)) 
+     { 
+-        DbgLogError(("prv_write_file: failed with status 0x%x\n", status));
++        DbgLogError(("prv_write_file: failed with status 0x%x\n", status));
+         return 0;
+     } 
+-//	DbgLogInfo(("prv_write_file: wrote %d bytes OK\n",  status_block.Information));
++//	DbgLogInfo(("prv_write_file: wrote %d bytes OK\n",  status_block.Information));
+ 	return  status_block.Information;
+ }
+ 
+ void CHapi::prv_close_file(HANDLE &fileHandle)
+ {
+-	DbgLogInfo(("prv_close_file(%p)\n", fileHandle));
++	DbgLogInfo(("prv_close_file(%p)\n", fileHandle));
+ 	if(fileHandle){   
+ 		ZwClose(fileHandle);
+ 		fileHandle = NULL;
+@@ -2519,7 +2519,7 @@ Uint64 CHapi::prv_get_mod_time(HANDLE fileHandle)
+     NTSTATUS status = STATUS_SUCCESS;
+     IO_STATUS_BLOCK status_block;
+     FILE_BASIC_INFORMATION FileInformation; 
+-
++
+ 	status = ZwQueryInformationFile( 
+ 			   fileHandle, 
+ 			   &status_block, 
+@@ -2543,7 +2543,7 @@ void CHapi::prv_init_transcode_files()
+ 
+ 	inFileHandle = prv_open_file("\\systemroot\\system32\\drivers\\transcode_in.ts", 0, &fileSize);
+ 	if(inFileHandle){
+-		DbgLogInfo(("prv_init_transcode_files() input file is %u bytes long\n", fileSize));
++		DbgLogInfo(("prv_init_transcode_files() input file is %u bytes long\n", fileSize));
+ 		if(fileSize){
+ 			outFileHandle = prv_open_file("\\systemroot\\system32\\drivers\\transcode_out.ts", 1, &fileSize);
+ 			if(outFileHandle)
+@@ -2551,7 +2551,7 @@ void CHapi::prv_init_transcode_files()
+ 		}
+ 		prv_close_file(inFileHandle);
+ 	}
+-	DbgLogInfo(("prv_init_transcode_files() failed\n"));
++	DbgLogInfo(("prv_init_transcode_files() failed\n"));
+ }
+ 
+ void CHapi::prv_init_encode_outfile()
+@@ -2562,35 +2562,35 @@ void CHapi::prv_init_encode_outfile()
+ 	if(outFileHandle)
+ 		return;
+ 
+-	DbgLogInfo(("prv_init_encode_outfile() failed\n"));
++	DbgLogInfo(("prv_init_encode_outfile() failed\n"));
+ }
+ #endif//DBG
+ 
+ #define TMDL_HDMITX_VFMT_ONLY
+ //#include "..\TDA19988_HdmiTx\comps\tmdlHdmiTx\inc\tmdlHdmiTx_Types.h" //for TMDL_HDMITX_VFMT_*
+-#include "Hapi_extra.h" // just yet
++#include "Hapi_extra.h" // just yet
+ 
+ void CHapi::setHDMIformat(DWORD hdmi_fmt)
+ {
+ 	lock();
+ 	if(_hdmi_fmt != hdmi_fmt){
+ 		if(!_API_ok){
+-			DbgLogWarn(("CHapi::setHDMIformat(%d) _API_ok==false!!\n", hdmi_fmt));
++			DbgLogWarn(("CHapi::setHDMIformat(%d) _API_ok==false!!\n", hdmi_fmt));
+ 			unlock();
+ 			return;
+ 		}
+ #if 0//FGR - only resume via HapiResume()
+ 		if(_hdmi_fmt == TMDL_HDMITX_VFMT_NULL){
+-			DbgLogInfo(("CHapi::setHDMIformat(%d) - Video SYNC restored\n", hdmi_fmt));
++			DbgLogInfo(("CHapi::setHDMIformat(%d) - Video SYNC restored\n", hdmi_fmt));
+ 			//If we have already seen this format then start encoder, otherwise wait for
+ 			// new encoder params to get sent ...
+ 			if(_isStarted && _isPaused && (hdmi_fmt == _last_good_hdmi_fmt)){
+ 				hapiStart();
+ 			}
+-		} else
+-#endif
++		} else
++#endif
+ 		if(hdmi_fmt == TMDL_HDMITX_VFMT_NULL){
+-			DbgLogInfo(("CHapi::setHDMIformat(%d) - Video SYNC lost\n", hdmi_fmt));
++			DbgLogInfo(("CHapi::setHDMIformat(%d) - Video SYNC lost\n", hdmi_fmt));
+ 			if(!_isPaused){
+ 				hapiStop();
+ 			}
+@@ -2647,10 +2647,10 @@ Uint32 CHapi::HapiStart()
+ Uint32 CHapi::hapiStart()
+ {
+ 	lock();
+-	DbgLogInfo(("hapiStart() gHapi=%p _last_PCR=0x%llx\n", gHapi, _last_PCR));
++	DbgLogInfo(("hapiStart() gHapi=%p _last_PCR=0x%llx\n", gHapi, _last_PCR));
+ 
+ 	if(!_API_ok){
+-		DbgLogWarn(("CHapi::hapiStart() _API_ok==false!!\n"));
++		DbgLogWarn(("CHapi::hapiStart() _API_ok==false!!\n"));
+ 		unlock();
+ 		return 0;
+ 	}
+@@ -2671,12 +2671,12 @@ Uint32 CHapi::hapiStart()
+ 				hapiErr = HAPI_PCRSet(gHapi, _last_PCR);
+ 			}
+ 
+-			DbgLogTrace(("DataTransfer::static_BufferComplete(): start\n"));
++			DbgLogTrace(("DataTransfer::static_BufferComplete(): start\n"));
+ 			if(_p_data_transfer){
+ 				//signal DISCONTINUITY on MPEG output pin
+-//#ifdef OLD_DRIVER
++//#ifdef OLD_DRIVER
+ 				DataTransfer::static_BufferComplete(_p_data_transfer, NULL, 0);
+-//#endif
++//#endif
+ 			}
+ 
+ 			_first_payload_delta = 0;
+@@ -2691,10 +2691,10 @@ Uint32 CHapi::hapiStart()
+ 		} else {
+ 			hapiErr = HAPI_FAIL;
+ 		}
+-		DbgLogInfo((" HAPI_Start hapiErr=0x%x\n", hapiErr));
++		DbgLogInfo((" HAPI_Start hapiErr=0x%x\n", hapiErr));
+ 	} else {
+ 		_isPaused = true;
+-		DbgLogInfo(("  HAPI_Start encoder is paused...\n"));
++		DbgLogInfo(("  HAPI_Start encoder is paused...\n"));
+ 	}
+ 	if(hapiErr != HAPI_SUCCESS){
+ 		_API_ok = false;
+@@ -2740,7 +2740,7 @@ bool CHapi::HapiRunning()
+ 	lock();
+ 	bool isRunning = _isStarted && !_isPaused;
+ 	
+-//	DbgLogTrace(("HapiRunning() gHapi=%p isRunning=%x\n", gHapi, isRunning));
++//	DbgLogTrace(("HapiRunning() gHapi=%p isRunning=%x\n", gHapi, isRunning));
+ 	if(!_API_ok){
+ 		unlock();
+ 		return false;
+@@ -2754,9 +2754,9 @@ Uint32 CHapi::hapiStop()
+ 	lock();
+ 	bool isRunning = _isStarted && !_isPaused;
+ 	
+-	DbgLogInfo(("hapiStop() gHapi=%p isRunning=%x\n", gHapi, isRunning));
++	DbgLogInfo(("hapiStop() gHapi=%p isRunning=%x\n", gHapi, isRunning));
+ 	if(!_API_ok){
+-		DbgLogWarn(("CHapi::hapiStop() _API_ok==false!!\n"));
++		DbgLogWarn(("CHapi::hapiStop() _API_ok==false!!\n"));
+ 		unlock();
+ 		return 0;
+ 	}
+@@ -2767,7 +2767,7 @@ Uint32 CHapi::hapiStop()
+ 
+ 			DWORD stalled_time = wrapGetTicks_ms() - _last_payload_time;
+ 			if(stalled_time > 1500){
+-				DbgLogWarn(("CHapi::hapiStop() stalled_time=%d, skipping HAPI_Stop()\n", stalled_time));
++				DbgLogWarn(("CHapi::hapiStop() stalled_time=%d, skipping HAPI_Stop()\n", stalled_time));
+ 				hapiErr = HAPI_FAIL;
+ 			} else {
+ #if 1//BLING
+@@ -2850,84 +2850,84 @@ Uint32 CHapi::hapiStop()
+ 	return hapiErr;
+ }
+ 
+-static unsigned getFrameRateId(float freq)
+-{
+-	switch((unsigned)(freq * 10.0)) {
+-		case 239:
+-			return 1;
++static unsigned getFrameRateId(float freq)
++{
++	switch((unsigned)(freq * 10.0)) {
++		case 239:
++			return 1;
+ 		case 240:
+-			return 2;
++			return 2;
+ 		case 249: // FGR - added, be tolerant of minor timing variations
+ 		case 250:
+-			return 3;
+-		case 299:
+-			return 4;
+-		case 300:
+-			return 5;
++			return 3;
++		case 299:
++			return 4;
++		case 300:
++			return 5;
+ 		case 499: // FGR - added, be tolerant of minor timing variations
+ 		case 500:
+-			return 6;
+-		case 599:
+-			return 7;
+-		case 600:
+-			return 8;
++			return 6;
++		case 599:
++			return 7;
++		case 600:
++			return 8;
+ 		case 149: // FGR - added, be tolerant of minor timing variations
+ 		case 150:
+-			return 9;
+-		case 100:
+-			return 10;
+-	}
++			return 9;
++		case 100:
++			return 10;
++	}
+ 	DbgLogWarn(("CHapi::getFrameRateId(%f) UNKNOWN Rate!!", freq));//FGR - added
+-	return 0;
+-}
+-
+-Uint32 CHapi::get_custom_defaults(HAPI_SET_PARAM *pParam, unsigned width, unsigned height, bool interlaced, float vFreq)
+-{
+-	if(pParam == NULL) {
+-		DbgLogWarn(("CHapi::get_custom_defaults(NULL)!!"));
+-		return 0;
+-	}
+-	memset(pParam, 0, sizeof(*pParam));
+-
+-	unsigned iFreqId = getFrameRateId(vFreq / (interlaced ? 2.0 : 1.0));
+-	unsigned oFreqId = iFreqId;
++	return 0;
++}
++
++Uint32 CHapi::get_custom_defaults(HAPI_SET_PARAM *pParam, unsigned width, unsigned height, bool interlaced, float vFreq)
++{
++	if(pParam == NULL) {
++		DbgLogWarn(("CHapi::get_custom_defaults(NULL)!!"));
++		return 0;
++	}
++	memset(pParam, 0, sizeof(*pParam));
++
++	unsigned iFreqId = getFrameRateId(vFreq / (interlaced ? 2.0 : 1.0));
++	unsigned oFreqId = iFreqId;
+ //	if((height >= 768) && (vFreq >= 50.0)) {
+ 	if((height >= 768) && (vFreq >= 31.0)) {//FGR - fix frame rate test
+-		oFreqId = getFrameRateId(vFreq / 2.0);
+-	}
+-
+-	if((iFreqId == 0) || (oFreqId == 0)) {
+-		DbgLogWarn(("CHapi::get_custom_defaults(): bad params; ifreq=%d ofreq=%d", iFreqId, oFreqId));
+-		return 0;
+-	}
+-
+-	if(interlaced) {
+-		set_encode_1080i60_h264(pParam);
+-	} else {
+-		set_encode_1080p60_h264(pParam);
+-	}
+-
+-	set_param(pParam, "VideoCapWidth", width);
+-	set_param(pParam, "VideoCapHeight", height);
+-	set_param(pParam, "VideoCapFrameRate", iFreqId); // 1 - 23.98, 2 - 24, 3 - 25, 4 - 29.97, 5 - 30, 6 - 50, 7 - 59.94, 8 - 60, 9 - 15, 10 - 10, 11 - 6, 12 - 5, 13 - 2, 14 - 1
+-	set_param(pParam, "VideoOutputWidth", width); // 1280 // 720 // 1440 // 1920       // output video width
+-	set_param(pParam, "VideoOutputHeight", height); // 720  // 480 // 1080 // 1080       // output video frame height always
+-	set_param(pParam, "VideoOutputFrameRate", oFreqId); // 1 - 23.98, 2 - 24, 3 - 25, 4 - 29.97, 5 - 30, 6 - 50, 7 - 59.94, 8 - 60, 9 - 15, 10 - 10, 11 - 6, 12 - 5, 13 - 2, 14 - 1
+-	set_param(pParam, "VideoRateControl", ((height < 768) ? 1 : 0)); // 0:CBR, 1: VBR, 2: CAPPED_VBR
+-
++		oFreqId = getFrameRateId(vFreq / 2.0);
++	}
++
++	if((iFreqId == 0) || (oFreqId == 0)) {
++		DbgLogWarn(("CHapi::get_custom_defaults(): bad params; ifreq=%d ofreq=%d", iFreqId, oFreqId));
++		return 0;
++	}
++
++	if(interlaced) {
++		set_encode_1080i60_h264(pParam);
++	} else {
++		set_encode_1080p60_h264(pParam);
++	}
++
++	set_param(pParam, "VideoCapWidth", width);
++	set_param(pParam, "VideoCapHeight", height);
++	set_param(pParam, "VideoCapFrameRate", iFreqId); // 1 - 23.98, 2 - 24, 3 - 25, 4 - 29.97, 5 - 30, 6 - 50, 7 - 59.94, 8 - 60, 9 - 15, 10 - 10, 11 - 6, 12 - 5, 13 - 2, 14 - 1
++	set_param(pParam, "VideoOutputWidth", width); // 1280 // 720 // 1440 // 1920       // output video width
++	set_param(pParam, "VideoOutputHeight", height); // 720  // 480 // 1080 // 1080       // output video frame height always
++	set_param(pParam, "VideoOutputFrameRate", oFreqId); // 1 - 23.98, 2 - 24, 3 - 25, 4 - 29.97, 5 - 30, 6 - 50, 7 - 59.94, 8 - 60, 9 - 15, 10 - 10, 11 - 6, 12 - 5, 13 - 2, 14 - 1
++	set_param(pParam, "VideoRateControl", ((height < 768) ? 1 : 0)); // 0:CBR, 1: VBR, 2: CAPPED_VBR
++
+ 	get_audenc_defaults(pParam); //FGR - Colossus-like Audio sampling rates
+-
+-	return 1;
+-}
+-
++
++	return 1;
++}
++
+ Uint32 CHapi::get_std_defaults(HAPI_SET_PARAM *pParam)
+ {
+ 	if(pParam == NULL){
+-		DbgLogInfo(("CHapi::get_std_defaults(NULL)!!\n"));
++		DbgLogInfo(("CHapi::get_std_defaults(NULL)!!\n"));
+ 		return 0;
+ 	}
+ 	DWORD hdmi_fmt = _hdmi_fmt;
+-	DbgLogInfo(("CHapi::get_std_defaults(%p), hdmi_fmt=%d\n", pParam, hdmi_fmt));
++	DbgLogInfo(("CHapi::get_std_defaults(%p), hdmi_fmt=%d\n", pParam, hdmi_fmt));
+ 	memset(pParam, 0, sizeof(*pParam));
+ 	
+ #if DBG
+@@ -3148,7 +3148,7 @@ Uint32 CHapi::get_std_defaults(HAPI_SET_PARAM *pParam)
+ 
+ 	default:
+ 	case TMDL_HDMITX_VFMT_NULL:
+-		DbgLogWarn(("No available mapping for hdmi_fmt=%d, assuming 720p60\n", hdmi_fmt));
++		DbgLogWarn(("No available mapping for hdmi_fmt=%d, assuming 720p60\n", hdmi_fmt));
+ 		hdmi_fmt = TMDL_HDMITX_VFMT_NULL;
+ 		set_encode_720p60_h264(pParam);
+ 		break;
+@@ -3165,7 +3165,7 @@ Uint32 CHapi::get_std_defaults(HAPI_SET_PARAM *pParam)
+ #if DBG
+ void CHapi::HapiTest(DWORD hdmi_fmt)
+ {
+-	DbgLogInfo(("HapiTest(%d)\n", hdmi_fmt));
++	DbgLogInfo(("HapiTest(%d)\n", hdmi_fmt));
+ 	
+ 	DWORD dwRunInitTests = 0xFF;
+ //	hcwGetRegistryDWORD("RunInitTests", &dwRunInitTests);
+@@ -3180,12 +3180,12 @@ void CHapi::HapiTest(DWORD hdmi_fmt)
+ 		hcwGetRegistryDWORD("TDA19977_pd", &dwTDA19977_pd);
+ 		if(dwTDA19977_pd & 0x02){
+ 			if(!p_mchip->UsbGetPortState(4, &value)){
+-				DbgLogError(("UsbGetPortState() FAILED!!\n"));
++				DbgLogError(("UsbGetPortState() FAILED!!\n"));
+ 				return;
+ 			}
+ 			p_mchip->UsbSetPortState(4, value | 0x40); //FGR - BUGBUG - disable TDA19977 for now
+ 			
+-			DbgLogInfo((" (disabling TDA19977 via PD pin; see TDA19977_pd reg value)\n"));
++			DbgLogInfo((" (disabling TDA19977 via PD pin; see TDA19977_pd reg value)\n"));
+ 		}
+ 
+ #endif
+@@ -3197,7 +3197,7 @@ void CHapi::HapiTest(DWORD hdmi_fmt)
+ 		for(i=0; i<8; i+=4){
+ 			if(!p_mchip->UsbEEpReadBytes(i, 4, buf))
+ 				break;
+-			DbgLogInfo((" Cypress EEprom[%d]=0x%02x,0x%02x,0x%02x,0x%02x\n", i, buf[0], buf[1], buf[2], buf[3]));
++			DbgLogInfo((" Cypress EEprom[%d]=0x%02x,0x%02x,0x%02x,0x%02x\n", i, buf[0], buf[1], buf[2], buf[3]));
+ 		}
+ #endif
+ 
+@@ -3258,11 +3258,11 @@ void CHapi::HapiTest(DWORD hdmi_fmt)
+ 								if(new_retrys < retrys){
+ 									retrys = new_retrys;
+ 								}
+-								DbgLogInfo((" Transcode Time remaining=%d\n", retrys));
++								DbgLogInfo((" Transcode Time remaining=%d\n", retrys));
+ 							}
+ 						}
+ 					} else {
+-						DbgLogInfo((" Skipping HAPI_Start, no file to transcode\n"));
++						DbgLogInfo((" Skipping HAPI_Start, no file to transcode\n"));
+ 					}
+ 				} else {
+ 					if((dwRunInitTests & 0x20) && (gBoard_bus == siena)){
+@@ -3285,7 +3285,7 @@ void CHapi::HapiTest(DWORD hdmi_fmt)
+ 							if(new_retrys < retrys){
+ 								retrys = new_retrys;
+ 							}
+-							DbgLogInfo((" Encode Time remaining=%d\n", retrys));
++							DbgLogInfo((" Encode Time remaining=%d\n", retrys));
+ 						}
+ 					}
+ 				}
+@@ -3297,7 +3297,7 @@ void CHapi::HapiTest(DWORD hdmi_fmt)
+ 
+ 
+ 		} else {
+-			DbgLogError((" powerUp() FAILED!!\n"));
++			DbgLogError((" powerUp() FAILED!!\n"));
+ 		}
+ 		gBoard_bus = savBoard_bus;
+ 	}
+@@ -3308,7 +3308,7 @@ void CHapi::HapiTest(DWORD hdmi_fmt)
+ HapiErrCode CHapi::AVDataRequest (HAPI_AV_DATA_INFO *info, void *context)
+ {
+ 	CHapi *p_CHapi = (CHapi *)context;
+-	DbgLogInfo(("AVDataRequest(%p) chan=%d buf=%p size=%u\n", p_CHapi, info->channel, info->buf, info->requestSize));
++	DbgLogInfo(("AVDataRequest(%p) chan=%d buf=%p size=%u\n", p_CHapi, info->channel, info->buf, info->requestSize));
+ 	memset(info->buf, 0, info->requestSize);
+ 
+ #if DBG
+@@ -3316,7 +3316,7 @@ HapiErrCode CHapi::AVDataRequest (HAPI_AV_DATA_INFO *info, void *context)
+ 		ULONG_PTR len = p_CHapi->prv_read_file(p_CHapi->inFileHandle, info->buf, info->requestSize);
+ 		if(len > 0/*info->requestSize*/){
+ 			if(len != info->requestSize){
+-				DbgLogInfo(("AVDataRequest EOF reached size=%u\n", len));
++				DbgLogInfo(("AVDataRequest EOF reached size=%u\n", len));
+ 			}
+ 			return HAPI_SUCCESS;
+ 		}
+@@ -3343,7 +3343,7 @@ HapiErrCode CHapi::ErrorMsgCallback(HAPI_ERROR_MSG_TYPE errorType, void *context
+ 			p_CHapi, param, param->assertErr.Reserved1, param->assertErr.Reserved2));
+ 		
+ 		param->assertErr.Reserved1 = 0; //do this before we print the possibly unterminated string
+-		DbgLogError((" text=\"%s\"\n", param->assertErr.text));
++		DbgLogError((" text=\"%s\"\n", param->assertErr.text));
+ 		break;
+     case HAPI_ERR_FRAME_COUNTER_0:
+         DbgLogError(("CHapi::ErrorMsgCallback(%p) HAPI_ERR_FRAME_COUNTER_0 Flow stalled at %us. vIn=%d vRes=%d vEnc=%d\n",
+@@ -3353,19 +3353,19 @@ HapiErrCode CHapi::ErrorMsgCallback(HAPI_ERROR_MSG_TYPE errorType, void *context
+ 		}
+ 		break;
+ 	case HAPI_ERR_AUD_CODEC_MISMATCH: // Selected audio codec does not match actual incoming data format.
+-		DbgLogError(("CHapi::ErrorMsgCallback(%p) HAPI_ERR_AUD_CODEC_MISMATCH param=%p\n", p_CHapi, param));
++		DbgLogError(("CHapi::ErrorMsgCallback(%p) HAPI_ERR_AUD_CODEC_MISMATCH param=%p\n", p_CHapi, param));
+ 		break;
+ 	case HAPI_ERR_AUD_LEVEL_ALARM: // Audio overflow or underflow on a specific channel (warning).
+-		DbgLogError(("CHapi::ErrorMsgCallback(%p) HAPI_ERR_AUD_LEVEL_ALARM param=%p\n", p_CHapi, param));
++		DbgLogError(("CHapi::ErrorMsgCallback(%p) HAPI_ERR_AUD_LEVEL_ALARM param=%p\n", p_CHapi, param));
+ 		break;
+ 	case HAPI_ERR_PCR_MISSING: // No PCR has been detected on the configured PCR PID for more than 500 ms.
+-		DbgLogError(("CHapi::ErrorMsgCallback(%p) HAPI_ERR_PCR_MISSING param=%p\n", p_CHapi,  param));
++		DbgLogError(("CHapi::ErrorMsgCallback(%p) HAPI_ERR_PCR_MISSING param=%p\n", p_CHapi,  param));
+ 		break;
+ 	case HAPI_ERR_UNSUPPORTED_CODEC: // The actual encoded stream (video or audio) is coded in an unsupported codec.
+-		DbgLogError(("CHapi::ErrorMsgCallback(%p) HAPI_ERR_UNSUPPORTED_CODEC param=%p\n", p_CHapi, param));
++		DbgLogError(("CHapi::ErrorMsgCallback(%p) HAPI_ERR_UNSUPPORTED_CODEC param=%p\n", p_CHapi, param));
+ 		break;
+ 	default:
+-		DbgLogError(("CHapi::ErrorMsgCallback(%p) UNKNOWN errorType=%d param=%p\n", p_CHapi, errorType, param));
++		DbgLogError(("CHapi::ErrorMsgCallback(%p) UNKNOWN errorType=%d param=%p\n", p_CHapi, errorType, param));
+ 	}
+ #if 1//BLING, Error LED
+ 	DWORD _bling_options = p_CHapi->_bling_options;
+@@ -3403,7 +3403,7 @@ HapiErrCode CHapi::ErrorMsgCallback(HAPI_ERROR_MSG_TYPE errorType, void *context
+ HapiErrCode CHapi::AVDataTransfer (HAPI_AV_DATA_INFO *info, void *context)
+ {
+ 	CHapi *p_CHapi = (CHapi *)context;
+-	DbgLogTrace(("AVDataTransfer(%p) chan=%d buf=%p size=%u\n", p_CHapi, info->channel, info->buf, info->requestSize));
++	DbgLogTrace(("AVDataTransfer(%p) chan=%d buf=%p size=%u\n", p_CHapi, info->channel, info->buf, info->requestSize));
+ 
+ #if DBG
+ 	if(p_CHapi->outFileHandle){
+@@ -3424,14 +3424,14 @@ HapiErrCode CHapi::AVDataTransfer (HAPI_AV_DATA_INFO *info, void *context)
+ 		DbgLogTrace(("AVDataTransfer_delta_t=%u\n", delta_t));
+ 	}
+ 	if(p_CHapi->_p_data_transfer){
+-//#ifdef OLD_DRIVER
++//#ifdef OLD_DRIVER
+ 		DataTransfer::static_BufferComplete(p_CHapi->_p_data_transfer, info->buf, info->requestSize);
+-//#endif
++//#endif
+ 	}
+ 
+ #if 1//BLING
+ 	USBBootMChip_t *p_mchip = p_CHapi->p_mchip;
+-
++
+ 	DWORD _bling_options = p_CHapi->_bling_options;
+ 	DWORD new_bling_options = p_mchip->getBling_Options();
+ 
+@@ -3555,16 +3555,16 @@ Uint32 CHapi::HapiStatusQuery (HAPI_QUERY_STRUCT *p_status)
+ {
+ 	lock();
+ 	if(gHapi == NULL){
+-		DbgLogError(("CHapi::StatusQuery() gHapi==NULL!!\n"));
++		DbgLogError(("CHapi::StatusQuery() gHapi==NULL!!\n"));
+ 		unlock();
+ 		return 0;
+ 	}
+ 	if(p_status == NULL){
+-		DbgLogError(("CHapi::StatusQuery() p_status==NULL!!\n"));
++		DbgLogError(("CHapi::StatusQuery() p_status==NULL!!\n"));
+ 		unlock();
+ 		return 0;
+ 	}
+-	DbgLogInfo(("CHapi::StatusQuery(%p)\n", p_status));
++	DbgLogInfo(("CHapi::StatusQuery(%p)\n", p_status));
+ 	memset(p_status, 0, sizeof(HAPI_QUERY_STRUCT));
+ 
+     HAPI_QUERY_STRUCT queriedStatus;
+@@ -3573,7 +3573,7 @@ Uint32 CHapi::HapiStatusQuery (HAPI_QUERY_STRUCT *p_status)
+ 	hapiErr = HAPI_StatusQuery(gHapi, &queriedStatus);
+     if(hapiErr != HAPI_SUCCESS)
+     {
+-		DbgLogWarn((" HAPI_StatusQuery hapiErr=0x%x\n", hapiErr));
++		DbgLogWarn((" HAPI_StatusQuery hapiErr=0x%x\n", hapiErr));
+ 		unlock();
+ 		return 0;
+     }
+@@ -3581,48 +3581,48 @@ Uint32 CHapi::HapiStatusQuery (HAPI_QUERY_STRUCT *p_status)
+  #if 1//DBG
+     if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_STATE)
+     {    
+-        DbgLogInfo(("STATUS_QUERY_STATE: %u\n", queriedStatus.state));
++        DbgLogInfo(("STATUS_QUERY_STATE: %u\n", queriedStatus.state));
+     }
+     if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_FRAMERATE)
+     {    
+-        DbgLogRelease(("STATUS_QUERY_FRAMERATE: %u\n", queriedStatus.frameRate));
++        DbgLogRelease(("STATUS_QUERY_FRAMERATE: %u\n", queriedStatus.frameRate));
+     }
+     if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_PCR)
+     {    
+-        DbgLogInfo(("STATUS_QUERY_PCR: 0x%llx\n", queriedStatus.pcr));
++        DbgLogInfo(("STATUS_QUERY_PCR: 0x%llx\n", queriedStatus.pcr));
+     }
+     if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_INFRCOUNT)
+     {    
+-        DbgLogRelease(("STATUS_QUERY_INFRCOUNT: %u\n", queriedStatus.inFrameCount));
++        DbgLogRelease(("STATUS_QUERY_INFRCOUNT: %u\n", queriedStatus.inFrameCount));
+     }
+     if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_OUTFRCOUNT)
+     {    
+-        DbgLogRelease(("STATUS_QUERY_OUTFRCOUNT: %u\n", queriedStatus.outFrameCount));
++        DbgLogRelease(("STATUS_QUERY_OUTFRCOUNT: %u\n", queriedStatus.outFrameCount));
+     }
+     if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_AR)
+     {    
+-        DbgLogInfo(("STATUS_QUERY_AR: %u\n", queriedStatus.ar));
++        DbgLogInfo(("STATUS_QUERY_AR: %u\n", queriedStatus.ar));
+     }
+   #if 0
+ 	if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_INTERLACE)
+     {    
+-        DbgLogInfo(("STATUS_QUERY_INTERLACE: %u\n", queriedStatus.isInterlaced));
++        DbgLogInfo(("STATUS_QUERY_INTERLACE: %u\n", queriedStatus.isInterlaced));
+     }
+     if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_WIDTH)
+     {    
+-        DbgLogInfo(("STATUS_QUERY_WIDTH: %u\n", queriedStatus.videoWidth));
++        DbgLogInfo(("STATUS_QUERY_WIDTH: %u\n", queriedStatus.videoWidth));
+     }
+     if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_HEIGHT)
+     {    
+-        DbgLogInfo(("STATUS_QUERY_HEIGHT: %u\n", queriedStatus.videoHeight));
++        DbgLogInfo(("STATUS_QUERY_HEIGHT: %u\n", queriedStatus.videoHeight));
+     }
+     if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_AUDIO_SAMPLE_RATE)
+     {    
+-        DbgLogInfo(("QUERY_AUDIO_SAMPLE_RATE: %u\n", queriedStatus.audioSamplingRate));
++        DbgLogInfo(("QUERY_AUDIO_SAMPLE_RATE: %u\n", queriedStatus.audioSamplingRate));
+     }
+     if (queriedStatus.bitMask & HAPI_BM_STATUS_QUERY_AUDIO_BIT_RATE)
+     {    
+-        DbgLogInfo(("QUERY_AUDIO_BIT_RATE: %u\n", queriedStatus.audioBitrate));
++        DbgLogInfo(("QUERY_AUDIO_BIT_RATE: %u\n", queriedStatus.audioBitrate));
+     }
+   #endif
+ 
+@@ -3639,86 +3639,86 @@ Uint32 CHapi::HapiStatusQuery (HAPI_QUERY_STRUCT *p_status)
+ void CHapi::verify_type_sizes()
+ {
+ 
+-	DbgLogTrace(("sizeof(Boolean)                     =%d\n", sizeof(Boolean)));
+-	DbgLogTrace(("sizeof(HAPI_VIDEO_CODEC)            =%d\n", sizeof(HAPI_VIDEO_CODEC)));
+-	DbgLogTrace(("sizeof(HAPI_AUDIO_CODEC)            =%d\n", sizeof(HAPI_AUDIO_CODEC)));
+-//	DbgLogTrace(("sizeof(HAPI_VIDEO_OUTPUT_RESOLUTION)=%d\n", sizeof(HAPI_VIDEO_OUTPUT_RESOLUTION)));
+-	DbgLogTrace(("sizeof(HAPI_VIDEO_OUTPUT_FRAME_RATE)=%d\n", sizeof(HAPI_VIDEO_OUTPUT_FRAME_RATE)));
+-	DbgLogTrace(("sizeof(HAPI_VIDEO_OUTPUT_MODE)      =%d\n", sizeof(HAPI_VIDEO_OUTPUT_MODE)));
+-	DbgLogTrace(("sizeof(HAPI_AUDIO_OUTPUT_MODE)      =%d\n", sizeof(HAPI_AUDIO_OUTPUT_MODE)));
+-	DbgLogTrace(("sizeof(HAPI_AUDIO_SAMPLE_RATE)      =%d\n", sizeof(HAPI_AUDIO_SAMPLE_RATE)));
+-	DbgLogTrace(("sizeof(HAPI_AUDIO_TRANSCODE_MODE)   =%d\n", sizeof(HAPI_AUDIO_TRANSCODE_MODE)));
+-	DbgLogTrace(("sizeof(HAPI_RATE_CONTROL)           =%d\n", sizeof(HAPI_RATE_CONTROL)));
+-	DbgLogTrace(("sizeof(HAPI_FILE_OUTPUT_FORMAT)     =%d\n", sizeof(HAPI_FILE_OUTPUT_FORMAT)));
+-	DbgLogTrace(("sizeof(HAPI_ANC_DATA_TRANSFER_MODE) =%d\n", sizeof(HAPI_ANC_DATA_TRANSFER_MODE)));
+-	DbgLogTrace(("sizeof(HAPI_ENCRYPTION_MODE)        =%d\n", sizeof(HAPI_ENCRYPTION_MODE)));
+-	DbgLogTrace(("sizeof(HAPI_AUDIO_BITRATE)          =%d\n", sizeof(HAPI_AUDIO_BITRATE)));
+-	DbgLogTrace(("sizeof(HAPI_CODING_MODE)            =%d\n", sizeof(HAPI_CODING_MODE)));
+-	DbgLogTrace(("sizeof(HAPI_VIDEO_ENTROPY_MODE)     =%d\n", sizeof(HAPI_VIDEO_ENTROPY_MODE)));
+-	DbgLogTrace(("sizeof(HAPI_VIDEO_PROFILE)          =%d\n", sizeof(HAPI_VIDEO_PROFILE)));
+-	DbgLogTrace(("sizeof(HAPI_VIDEO_H264_LEVEL)       =%d\n", sizeof(HAPI_VIDEO_H264_LEVEL)));
+-	DbgLogTrace(("sizeof(HAPI_LATENCY)                =%d\n", sizeof(HAPI_LATENCY)));
+-
+-	DbgLogTrace(("\n"));
+-	DbgLogTrace(("sizeof(HAPI_DECODE_PARAMS)   =%d\n", sizeof(HAPI_DECODE_PARAMS)));
+-	DbgLogTrace(("sizeof(XCODE_VIDEO_PARAMS)   =%d\n", sizeof(XCODE_VIDEO_PARAMS)));
+-	DbgLogTrace(("sizeof(XCODE_AUDIO_PARAMS)   =%d\n", sizeof(XCODE_AUDIO_PARAMS)));
+-	DbgLogTrace(("sizeof(ENCODE_VIDEO_PARAMS)  =%d\n", sizeof(ENCODE_VIDEO_PARAMS)));
+-	DbgLogTrace(("sizeof(ENCODE_AUDIO_PARAMS)  =%d\n", sizeof(ENCODE_AUDIO_PARAMS)));
+-	DbgLogTrace(("sizeof(SYS_LOG_PARAMS)       =%d\n", sizeof(SYS_LOG_PARAMS)));
+-	DbgLogTrace(("sizeof(HAPI_TRANSCODE_PARAMS)=%d\n", sizeof(HAPI_TRANSCODE_PARAMS)));
+-	DbgLogTrace(("sizeof(HAPI_ENCODE_PARAMS)   =%d\n", sizeof(HAPI_ENCODE_PARAMS)));
+-	DbgLogTrace(("sizeof(HAPI_AV_DATA_INFO)    =%d\n", sizeof(HAPI_AV_DATA_INFO)));
+-	DbgLogTrace(("sizeof(HAPI_SET_PARAM)       =%d\n", sizeof(HAPI_SET_PARAM)));
++	DbgLogTrace(("sizeof(Boolean)                     =%d\n", sizeof(Boolean)));
++	DbgLogTrace(("sizeof(HAPI_VIDEO_CODEC)            =%d\n", sizeof(HAPI_VIDEO_CODEC)));
++	DbgLogTrace(("sizeof(HAPI_AUDIO_CODEC)            =%d\n", sizeof(HAPI_AUDIO_CODEC)));
++//	DbgLogTrace(("sizeof(HAPI_VIDEO_OUTPUT_RESOLUTION)=%d\n", sizeof(HAPI_VIDEO_OUTPUT_RESOLUTION)));
++	DbgLogTrace(("sizeof(HAPI_VIDEO_OUTPUT_FRAME_RATE)=%d\n", sizeof(HAPI_VIDEO_OUTPUT_FRAME_RATE)));
++	DbgLogTrace(("sizeof(HAPI_VIDEO_OUTPUT_MODE)      =%d\n", sizeof(HAPI_VIDEO_OUTPUT_MODE)));
++	DbgLogTrace(("sizeof(HAPI_AUDIO_OUTPUT_MODE)      =%d\n", sizeof(HAPI_AUDIO_OUTPUT_MODE)));
++	DbgLogTrace(("sizeof(HAPI_AUDIO_SAMPLE_RATE)      =%d\n", sizeof(HAPI_AUDIO_SAMPLE_RATE)));
++	DbgLogTrace(("sizeof(HAPI_AUDIO_TRANSCODE_MODE)   =%d\n", sizeof(HAPI_AUDIO_TRANSCODE_MODE)));
++	DbgLogTrace(("sizeof(HAPI_RATE_CONTROL)           =%d\n", sizeof(HAPI_RATE_CONTROL)));
++	DbgLogTrace(("sizeof(HAPI_FILE_OUTPUT_FORMAT)     =%d\n", sizeof(HAPI_FILE_OUTPUT_FORMAT)));
++	DbgLogTrace(("sizeof(HAPI_ANC_DATA_TRANSFER_MODE) =%d\n", sizeof(HAPI_ANC_DATA_TRANSFER_MODE)));
++	DbgLogTrace(("sizeof(HAPI_ENCRYPTION_MODE)        =%d\n", sizeof(HAPI_ENCRYPTION_MODE)));
++	DbgLogTrace(("sizeof(HAPI_AUDIO_BITRATE)          =%d\n", sizeof(HAPI_AUDIO_BITRATE)));
++	DbgLogTrace(("sizeof(HAPI_CODING_MODE)            =%d\n", sizeof(HAPI_CODING_MODE)));
++	DbgLogTrace(("sizeof(HAPI_VIDEO_ENTROPY_MODE)     =%d\n", sizeof(HAPI_VIDEO_ENTROPY_MODE)));
++	DbgLogTrace(("sizeof(HAPI_VIDEO_PROFILE)          =%d\n", sizeof(HAPI_VIDEO_PROFILE)));
++	DbgLogTrace(("sizeof(HAPI_VIDEO_H264_LEVEL)       =%d\n", sizeof(HAPI_VIDEO_H264_LEVEL)));
++	DbgLogTrace(("sizeof(HAPI_LATENCY)                =%d\n", sizeof(HAPI_LATENCY)));
++
++	DbgLogTrace(("\n"));
++	DbgLogTrace(("sizeof(HAPI_DECODE_PARAMS)   =%d\n", sizeof(HAPI_DECODE_PARAMS)));
++	DbgLogTrace(("sizeof(XCODE_VIDEO_PARAMS)   =%d\n", sizeof(XCODE_VIDEO_PARAMS)));
++	DbgLogTrace(("sizeof(XCODE_AUDIO_PARAMS)   =%d\n", sizeof(XCODE_AUDIO_PARAMS)));
++	DbgLogTrace(("sizeof(ENCODE_VIDEO_PARAMS)  =%d\n", sizeof(ENCODE_VIDEO_PARAMS)));
++	DbgLogTrace(("sizeof(ENCODE_AUDIO_PARAMS)  =%d\n", sizeof(ENCODE_AUDIO_PARAMS)));
++	DbgLogTrace(("sizeof(SYS_LOG_PARAMS)       =%d\n", sizeof(SYS_LOG_PARAMS)));
++	DbgLogTrace(("sizeof(HAPI_TRANSCODE_PARAMS)=%d\n", sizeof(HAPI_TRANSCODE_PARAMS)));
++	DbgLogTrace(("sizeof(HAPI_ENCODE_PARAMS)   =%d\n", sizeof(HAPI_ENCODE_PARAMS)));
++	DbgLogTrace(("sizeof(HAPI_AV_DATA_INFO)    =%d\n", sizeof(HAPI_AV_DATA_INFO)));
++	DbgLogTrace(("sizeof(HAPI_SET_PARAM)       =%d\n", sizeof(HAPI_SET_PARAM)));
+ 	
+-	DbgLogTrace(("\n"));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_GET_PARAM_REQ)          =%d\n", sizeof(HWAPI_MSG_GET_PARAM_REQ)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_GET_PARAM_RSP)          =%d\n", sizeof(HWAPI_MSG_GET_PARAM_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_SET_PARAM)              =%d\n", sizeof(HWAPI_MSG_SET_PARAM)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_SET_PARAM_RSP)          =%d\n", sizeof(HWAPI_MSG_SET_PARAM_RSP)));
+-
+-	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_WRITE)              =%d\n", sizeof(HWAPI_MSG_I2C_WRITE)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_WRITE_RSP)          =%d\n", sizeof(HWAPI_MSG_I2C_WRITE_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_READ)               =%d\n", sizeof(HWAPI_MSG_I2C_READ)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_READ_RSP)           =%d\n", sizeof(HWAPI_MSG_I2C_READ_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_CLOCK_FREQ)         =%d\n", sizeof(HWAPI_MSG_I2C_CLOCK_FREQ)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_CLOCK_FREQ_RSP)     =%d\n", sizeof(HWAPI_MSG_I2C_CLOCK_FREQ_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_MONITOR_INSTALL)    =%d\n", sizeof(HWAPI_MSG_I2C_MONITOR_INSTALL)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_MONITOR_INSTALL_RSP)=%d\n", sizeof(HWAPI_MSG_I2C_MONITOR_INSTALL_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_OUTPUT_MONITOR_DATA)=%d\n", sizeof(HWAPI_MSG_I2C_OUTPUT_MONITOR_DATA)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_PCR_DATA)               =%d\n", sizeof(HWAPI_MSG_PCR_DATA)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_PCR_DATA_RSP)           =%d\n", sizeof(HWAPI_MSG_PCR_DATA_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_AR_DATA)                =%d\n", sizeof(HWAPI_MSG_AR_DATA)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_AR_DATA_RSP)            =%d\n", sizeof(HWAPI_MSG_AR_DATA_RSP)));
++	DbgLogTrace(("\n"));
++	DbgLogTrace(("sizeof(HWAPI_MSG_GET_PARAM_REQ)          =%d\n", sizeof(HWAPI_MSG_GET_PARAM_REQ)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_GET_PARAM_RSP)          =%d\n", sizeof(HWAPI_MSG_GET_PARAM_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_SET_PARAM)              =%d\n", sizeof(HWAPI_MSG_SET_PARAM)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_SET_PARAM_RSP)          =%d\n", sizeof(HWAPI_MSG_SET_PARAM_RSP)));
++
++	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_WRITE)              =%d\n", sizeof(HWAPI_MSG_I2C_WRITE)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_WRITE_RSP)          =%d\n", sizeof(HWAPI_MSG_I2C_WRITE_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_READ)               =%d\n", sizeof(HWAPI_MSG_I2C_READ)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_READ_RSP)           =%d\n", sizeof(HWAPI_MSG_I2C_READ_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_CLOCK_FREQ)         =%d\n", sizeof(HWAPI_MSG_I2C_CLOCK_FREQ)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_CLOCK_FREQ_RSP)     =%d\n", sizeof(HWAPI_MSG_I2C_CLOCK_FREQ_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_MONITOR_INSTALL)    =%d\n", sizeof(HWAPI_MSG_I2C_MONITOR_INSTALL)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_MONITOR_INSTALL_RSP)=%d\n", sizeof(HWAPI_MSG_I2C_MONITOR_INSTALL_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_I2C_OUTPUT_MONITOR_DATA)=%d\n", sizeof(HWAPI_MSG_I2C_OUTPUT_MONITOR_DATA)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_PCR_DATA)               =%d\n", sizeof(HWAPI_MSG_PCR_DATA)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_PCR_DATA_RSP)           =%d\n", sizeof(HWAPI_MSG_PCR_DATA_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_AR_DATA)                =%d\n", sizeof(HWAPI_MSG_AR_DATA)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_AR_DATA_RSP)            =%d\n", sizeof(HWAPI_MSG_AR_DATA_RSP)));
+ 	
+-	DbgLogTrace(("sizeof(HWAPI_MSG_SET_AVL)                =%d\n", sizeof(HWAPI_MSG_SET_AVL)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_SET_AVL_RSP)            =%d\n", sizeof(HWAPI_MSG_SET_AVL_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_START)                  =%d\n", sizeof(HWAPI_MSG_START)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_START_RSP)              =%d\n", sizeof(HWAPI_MSG_START_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_STOP)                   =%d\n", sizeof(HWAPI_MSG_STOP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_STOP_RSP)               =%d\n", sizeof(HWAPI_MSG_STOP_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_INIT)                   =%d\n", sizeof(HWAPI_MSG_INIT)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_INIT_RSP)               =%d\n", sizeof(HWAPI_MSG_INIT_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_EXIT)                   =%d\n", sizeof(HWAPI_MSG_EXIT)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_EXIT_RSP)               =%d\n", sizeof(HWAPI_MSG_EXIT_RSP)));
+-
+-	DbgLogTrace(("sizeof(HWAPI_MSG_FWUPGRADE)              =%d\n", sizeof(HWAPI_MSG_FWUPGRADE)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_FWUPGRADE_RSP)          =%d\n", sizeof(HWAPI_MSG_FWUPGRADE_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_SET_AVL)                =%d\n", sizeof(HWAPI_MSG_SET_AVL)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_SET_AVL_RSP)            =%d\n", sizeof(HWAPI_MSG_SET_AVL_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_START)                  =%d\n", sizeof(HWAPI_MSG_START)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_START_RSP)              =%d\n", sizeof(HWAPI_MSG_START_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_STOP)                   =%d\n", sizeof(HWAPI_MSG_STOP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_STOP_RSP)               =%d\n", sizeof(HWAPI_MSG_STOP_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_INIT)                   =%d\n", sizeof(HWAPI_MSG_INIT)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_INIT_RSP)               =%d\n", sizeof(HWAPI_MSG_INIT_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_EXIT)                   =%d\n", sizeof(HWAPI_MSG_EXIT)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_EXIT_RSP)               =%d\n", sizeof(HWAPI_MSG_EXIT_RSP)));
++
++	DbgLogTrace(("sizeof(HWAPI_MSG_FWUPGRADE)              =%d\n", sizeof(HWAPI_MSG_FWUPGRADE)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_FWUPGRADE_RSP)          =%d\n", sizeof(HWAPI_MSG_FWUPGRADE_RSP)));
+ 	
+-	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_INPUT_DATA)      =%d\n", sizeof(HWAPI_MSG_STREAM_INPUT_DATA)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_INPUT_DATA_RSP)  =%d\n", sizeof(HWAPI_MSG_STREAM_INPUT_DATA_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_INPUT_DATA_INF)  =%d\n", sizeof(HWAPI_MSG_STREAM_INPUT_DATA_INF)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_ERROR)                  =%d\n", sizeof(HWAPI_MSG_ERROR)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_DATA_REQUEST)    =%d\n", sizeof(HWAPI_MSG_STREAM_DATA_REQUEST)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_DATA_REQUEST_RSP)=%d\n", sizeof(HWAPI_MSG_STREAM_DATA_REQUEST_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA)     =%d\n", sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA_RSP) =%d\n", sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA_RSP)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA_INF) =%d\n", sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA_INF)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_AV_UPDATE)              =%d\n", sizeof(HWAPI_MSG_AV_UPDATE)));
+-
+-	DbgLogTrace(("sizeof(HWAPI_MSG_ERR_UPDATE)             =%d\n", sizeof(HWAPI_MSG_ERR_UPDATE)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_QUERY_STATUS)           =%d\n", sizeof(HWAPI_MSG_QUERY_STATUS)));
+-	DbgLogTrace(("sizeof(HWAPI_MSG_QUERY_STATUS_RSP)       =%d\n", sizeof(HWAPI_MSG_QUERY_STATUS_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_INPUT_DATA)      =%d\n", sizeof(HWAPI_MSG_STREAM_INPUT_DATA)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_INPUT_DATA_RSP)  =%d\n", sizeof(HWAPI_MSG_STREAM_INPUT_DATA_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_INPUT_DATA_INF)  =%d\n", sizeof(HWAPI_MSG_STREAM_INPUT_DATA_INF)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_ERROR)                  =%d\n", sizeof(HWAPI_MSG_ERROR)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_DATA_REQUEST)    =%d\n", sizeof(HWAPI_MSG_STREAM_DATA_REQUEST)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_DATA_REQUEST_RSP)=%d\n", sizeof(HWAPI_MSG_STREAM_DATA_REQUEST_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA)     =%d\n", sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA_RSP) =%d\n", sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA_RSP)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA_INF) =%d\n", sizeof(HWAPI_MSG_STREAM_OUTPUT_DATA_INF)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_AV_UPDATE)              =%d\n", sizeof(HWAPI_MSG_AV_UPDATE)));
++
++	DbgLogTrace(("sizeof(HWAPI_MSG_ERR_UPDATE)             =%d\n", sizeof(HWAPI_MSG_ERR_UPDATE)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_QUERY_STATUS)           =%d\n", sizeof(HWAPI_MSG_QUERY_STATUS)));
++	DbgLogTrace(("sizeof(HWAPI_MSG_QUERY_STATUS_RSP)       =%d\n", sizeof(HWAPI_MSG_QUERY_STATUS_RSP)));
+ 
+ }
+ #endif//DBG
+@@ -3744,7 +3744,7 @@ VOID CHapi::static_doPowerChk(CHapi* p_CHapi)
+ 
+ VOID CHapi::doPowerChk()
+ {
+-	DbgLogInfo(("CHapi::doPowerChk() this=%p, _power_down_delay=%u\n", this, _power_down_delay));
++	DbgLogInfo(("CHapi::doPowerChk() this=%p, _power_down_delay=%u\n", this, _power_down_delay));
+ 	_power_time_left = _power_down_delay;
+ 
+     while(true)
+@@ -3768,7 +3768,7 @@ VOID CHapi::doPowerChk()
+             );
+ 
+         if(STATUS_TIMEOUT != status){ // status == STATUS_SUCCES when signalled
+-			DbgLogInfo(("CHapi::doPowerChk() got status=%x\n", status));
++			DbgLogInfo(("CHapi::doPowerChk() got status=%x\n", status));
+             break;
+         }
+ 		lock(); //interlock with any ongoing CHapi powerDown()/powerUp() activities
+@@ -3798,7 +3798,7 @@ VOID CHapi::doPowerChk()
+ /////////////////////////////////////////////////////////////////////////////////////////
+ NTSTATUS CHapi::startPowerThread()
+ {
+-	DbgLogInfo(("CHapi::startPowerThread() _polling_thread_object=%p\n", _polling_thread_object));
++	DbgLogInfo(("CHapi::startPowerThread() _polling_thread_object=%p\n", _polling_thread_object));
+     if (_polling_thread_object)
+     {
+         return STATUS_UNSUCCESSFUL;
+@@ -3819,7 +3819,7 @@ NTSTATUS CHapi::startPowerThread()
+ 
+     if(!NT_SUCCESS(status)){
+ 		_polling_thread_object = NULL;
+-		DbgLogError(("CHapi::startPowerThread() returns=%x\n", status));
++		DbgLogError(("CHapi::startPowerThread() returns=%x\n", status));
+         return status;
+ 	}
+     status = ObReferenceObjectByHandle(
+@@ -3833,13 +3833,13 @@ NTSTATUS CHapi::startPowerThread()
+     ZwClose(thread_handle);
+ 
+ 	wrapSleep_ms(20);
+-	DbgLogInfo(("CHapi::startPowerThread() returns=%x\n", status));
++	DbgLogInfo(("CHapi::startPowerThread() returns=%x\n", status));
+     return status;
+ }
+ 
+ VOID CHapi::stopPowerThread()
+ {
+-	DbgLogInfo(("CHapi::stopPowerThread() _polling_thread_object=%p\n", _polling_thread_object));
++	DbgLogInfo(("CHapi::stopPowerThread() _polling_thread_object=%p\n", _polling_thread_object));
+ 
+ 	//in case it's just starting ...
+ 	while(_polling_thread_object == (PVOID)((INT_PTR)0xbadbeef1)){
+@@ -3867,7 +3867,7 @@ VOID CHapi::stopPowerThread()
+         FALSE,
+         NULL);
+ 
+-	DbgLogInfo(("CHapi::stopPowerThread() returns\n"));
++	DbgLogInfo(("CHapi::stopPowerThread() returns\n"));
+ }
+ 
+ #endif//HAPI_POWER_THREAD
+@@ -3877,10 +3877,10 @@ VOID CHapi::stopPowerThread()
+ Uint32 CHapi::setScalerSettings(ScalerSettings *pScaler)
+ {
+ 	if(pScaler == NULL){
+-		DbgLogWarn(("CHapi::setScalerSettings(NULL)!!\n"));
++		DbgLogWarn(("CHapi::setScalerSettings(NULL)!!\n"));
+ 		return 0;
+ 	}
+-	DbgLogInfo(("CHapi::setScalerSettings(%p) scaler.mode=%d\n", pScaler, pScaler->mode));
++	DbgLogInfo(("CHapi::setScalerSettings(%p) scaler.mode=%d\n", pScaler, pScaler->mode));
+ 	m_extcapParams.scaler = *pScaler;
+ 	return 1;
+ }
+@@ -3888,11 +3888,11 @@ Uint32 CHapi::setScalerSettings(ScalerSettings *pScaler)
+ Uint32 CHapi::setAudEncSettings(AudEncSettings *pAudEnc)
+ {
+ 	if(pAudEnc == NULL){
+-		DbgLogWarn(("CHapi::setAudEncSettings(NULL)!!\n"));
++		DbgLogWarn(("CHapi::setAudEncSettings(NULL)!!\n"));
+ 		return 0;
+ 	}
+-	DbgLogInfo(("CHapi::setAudEncSettings(%p) rate441=%d rate48=%d\n", pAudEnc, pAudEnc->sample_rate_441, pAudEnc->sample_rate_48));
+-
++	DbgLogInfo(("CHapi::setAudEncSettings(%p) rate441=%d rate48=%d\n", pAudEnc, pAudEnc->sample_rate_441, pAudEnc->sample_rate_48));
++
+ 	m_extcapParams.audioEncoder = *pAudEnc;
+ 	return 1;
+ }
+@@ -3902,18 +3902,18 @@ Uint32 CHapi::setAudEncSettings(AudEncSettings *pAudEnc)
+ Uint32 CHapi::get_audenc_defaults(HAPI_SET_PARAM *pParam)
+ {
+ 	if(pParam == NULL){
+-		DbgLogWarn(("CHapi::get_audenc_defaults(NULL)!!\n"));
++		DbgLogWarn(("CHapi::get_audenc_defaults(NULL)!!\n"));
+ 		return 0;
+ 	}
+ 	// in kHz. 0:NONE 1:32, 2:44.1, 3:48, 4:96, 5:192, 6:16
+ 	HAPI_AUDIO_SAMPLE_RATE sampleRate = pParam->params.encodeParam.AudioParams.AudioCapSampleRate;
+-	DbgLogInfo(("CHapi::get_audenc_defaults(%p) sampleRate=%d\n", pParam, sampleRate));
++	DbgLogInfo(("CHapi::get_audenc_defaults(%p) sampleRate=%d\n", pParam, sampleRate));
+ 
+     AUDIO_SAMPLE_RATES *p_orig_rate = NULL;
+ 	AUDIO_SAMPLE_RATES new_rate = (AUDIO_SAMPLE_RATES)0;
+ 	switch(sampleRate){
+ 	default:
+-		DbgLogWarn(("  sampleRate unknown!!\n"));
++		DbgLogWarn(("  sampleRate unknown!!\n"));
+ 		//fallthru
+ 	case HAPI_AUDIO_SAMPLE_RATE_FOLLOW_INPUT:
+ 	case HAPI_AUDIO_SAMPLE_RATE_NONE:
+@@ -4001,11 +4001,11 @@ Uint32 CHapi::get_audenc_defaults(HAPI_SET_PARAM *pParam)
+ Uint32 CHapi::get_scaler_defaults(HAPI_SET_PARAM *pParam)
+ {
+ 	if(pParam == NULL){
+-		DbgLogWarn(("CHapi::get_scaler_defaults(NULL)!!\n"));
++		DbgLogWarn(("CHapi::get_scaler_defaults(NULL)!!\n"));
+ 		return 0;
+ 	}
+ 	DWORD hdmi_fmt = _hdmi_fmt;
+-	DbgLogInfo(("CHapi::get_scaler_defaults(%p), hdmi_fmt=%d\n", pParam, hdmi_fmt));
++	DbgLogInfo(("CHapi::get_scaler_defaults(%p), hdmi_fmt=%d\n", pParam, hdmi_fmt));
+ 	
+ 	//FGR - allow StreamEez testing via registry (but really should only use for testing)
+ 	hcwGetRegistryDWORD(HAUP_SCALER_MODE,     (LPDWORD)&m_extcapParams.scaler.mode);
+@@ -4074,7 +4074,7 @@ Uint32 CHapi::get_scaler_defaults(HAPI_SET_PARAM *pParam)
+ 	case TMDL_HDMITX_VFMT_22_720x576i_50Hz:
+ 	case TMDL_HDMITX_VFMT_25_720x576i_50Hz:
+ 	case TMDL_HDMITX_VFMT_26_720x576i_50Hz:
+-		//DbgLogWarn(("CHapi::get_scaler_defaults() No support for 720x576i_50Hz hdmi_fmt=%d\n", hdmi_fmt));
++		//DbgLogWarn(("CHapi::get_scaler_defaults() No support for 720x576i_50Hz hdmi_fmt=%d\n", hdmi_fmt));
+ 		disp_horz = 720;
+ 		disp_vert = 576;
+ 		if( m_extcapParams.scaler.resSDI == SCALE_RES_720x480 )
+@@ -4161,7 +4161,7 @@ Uint32 CHapi::get_scaler_defaults(HAPI_SET_PARAM *pParam)
+ 
+ 	case TMDL_HDMITX_VFMT_17_720x576p_50Hz:
+ 	case TMDL_HDMITX_VFMT_18_720x576p_50Hz:
+-		//DbgLogWarn(("CHapi::get_scaler_defaults() No support for 720x576p_50Hz hdmi_fmt=%d\n", hdmi_fmt));
++		//DbgLogWarn(("CHapi::get_scaler_defaults() No support for 720x576p_50Hz hdmi_fmt=%d\n", hdmi_fmt));
+ 		disp_horz = 720;
+ 		disp_vert = 576;
+ 		if( m_extcapParams.scaler.resSDP == SCALE_RES_720x480 )
+@@ -4522,7 +4522,7 @@ Uint32 CHapi::get_scaler_defaults(HAPI_SET_PARAM *pParam)
+ 		break;
+ 
+ 	default:
+-		DbgLogWarn(("CHapi::get_scaler_defaults() No support for hdmi_fmt=%d\n", hdmi_fmt));
++		DbgLogWarn(("CHapi::get_scaler_defaults() No support for hdmi_fmt=%d\n", hdmi_fmt));
+ 	case TMDL_HDMITX_VFMT_NULL:
+ 		break;
+ 	}
+@@ -4723,7 +4723,7 @@ void CHapi::reset_logo_data()
+ 
+ Uint64 CHapi::read_logo_data()
+ {
+-#ifdef OLD_DRIVER
++#ifdef OLD_DRIVER
+ 	//FGR - should we allow this?
+ 	DWORD dwEnableLogoData = 1;
+ 	hcwGetRegistryDWORD("EnableLogoData", &dwEnableLogoData);
+@@ -4788,9 +4788,9 @@ Uint64 CHapi::read_logo_data()
+ 	}
+ 	
+ 	return modTime;
+-#else
+-	return 0;
+-#endif
++#else
++	return 0;
++#endif
+ }
+ 
+ Uint32 CHapi::cvt_OUTPUT_FRAME_RATE(HAPI_VIDEO_OUTPUT_FRAME_RATE value)
+@@ -4879,11 +4879,11 @@ Uint32 CHapi::HapiGetEncStatus(pEncStatus pStatus)
+ 	lock();
+ 	DbgLogInfo(("CHapi::HapiGetEncStatus(%p)\n", pStatus));
+ 
+-#ifdef HAPI_POWER_THREAD
++#ifdef HAPI_POWER_THREAD
+ 	pStatus->power_time_left = _power_time_left;
+-#else
++#else
+ 	pStatus->power_time_left = 0;
+-#endif
++#endif
+ 
+ 	bool isReady = false;
+ 	isReady = (hapiErr == HAPI_SUCCESS) && _API_ok && !p_mchip->hadUsbError("CHapi::HapiGetEncStatus()");
+diff --git a/Common/EncoderDev/HAPIHost/HwapiUsb.cpp b/Common/EncoderDev/HAPIHost/HwapiUsb.cpp
+index 54929a3..71cafa9 100644
+--- a/Common/EncoderDev/HAPIHost/HwapiUsb.cpp
++++ b/Common/EncoderDev/HAPIHost/HwapiUsb.cpp
+@@ -12,8 +12,8 @@
+ #include "HwapiUsb.h"
+ 
+ #include "mchip.h"
+-#include "mchip_registers.h"
+-#include "mchip_utils.h"
++#include "mchip_registers.h"
++#include "mchip_utils.h"
+ 
+ #define MCHIP_MEMTEST_SWEEP       1
+ // timeout for image to boot
+@@ -27,7 +27,7 @@ USBDevHandle USB_CommBusInit (Uint32 ChipID,hw_port_config *pHwPortConfig)
+     pUsbConfig = (usb_config_st*)MemAllocFromHeap(__FILE__, __LINE__, sizeof(usb_config_st));
+     if(pUsbConfig==NULL)
+     {
+-        DbgLogInfo(("USB_CommBusInit malloc failed\n"));
++        DbgLogInfo(("USB_CommBusInit malloc failed\n"));
+         return NULL;
+     }
+ 	pUsbConfig->p_mchip = pHwPortConfig->usb_port_config.p_mchip;
+@@ -54,129 +54,129 @@ HWAPIErrCode USB_GetBoardInfo (USBDevHandle hDevice, BOARD_INFO *pBoardInfo)
+     {
+         if(!p_mchip->UsbEEpReadBytes((nameplateIndex-1)*DATA_PACKET_LEN, 1, &dataLength))
+         {
+-        	DbgLogError(("read data length fail!\n"));
++        	DbgLogError(("read data length fail!\n"));
+         	return HWAPI_Fail;
+         }
+         if(dataLength==0xff)
+         {
+-        	DbgLogWarn(("EEprom appears to be blank!\n"));
++        	DbgLogWarn(("EEprom appears to be blank!\n"));
+         	return HWAPI_Fail;
+         }
+         if(dataLength >= sizeof(tmpData))
+         {
+-        	DbgLogWarn(("Nameplate(%d) length(%d)>%d!\n", (nameplateIndex-1), dataLength, sizeof(tmpData)));
++        	DbgLogWarn(("Nameplate(%d) length(%d)>%d!\n", (nameplateIndex-1), dataLength, sizeof(tmpData)));
+         	return HWAPI_Fail;
+         }
+         if(!p_mchip->UsbEEpReadBytes((nameplateIndex-1)*DATA_PACKET_LEN+1, 1, &nameplate))
+         {
+-        	DbgLogError(("read nameplate fail!\n"));
++        	DbgLogError(("read nameplate fail!\n"));
+         	return HWAPI_Fail;
+         }
+         if(!p_mchip->UsbEEpReadBytes((nameplateIndex-1)*DATA_PACKET_LEN+2, dataLength, (BYTE *)tmpData))
+         {
+-        	DbgLogError(("read data fail! nameplate=%d.\n",nameplate));
++        	DbgLogError(("read data fail! nameplate=%d.\n",nameplate));
+         	return HWAPI_Fail;
+         }
+         else
+         {
+             tmpData[dataLength]=0;
+-			//DbgLogInfo(("dataLength is %d\n",dataLength));
++			//DbgLogInfo(("dataLength is %d\n",dataLength));
+         }
+         switch(nameplate)
+         {
+             case NI_COMPANY       :
+                 strcpy(pBoardInfo->company,tmpData);
+-                DbgLogInfo(("Company Name: %s.\n",tmpData));
++                DbgLogInfo(("Company Name: %s.\n",tmpData));
+                 break;
+             case NI_BOARD_ID      :
+                 strcpy(pBoardInfo->boardID,tmpData);
+-                DbgLogInfo(("Board ID: %s.\n",tmpData));
++                DbgLogInfo(("Board ID: %s.\n",tmpData));
+                 break;
+             case NI_HDR_EV        :
+                 strcpy(pBoardInfo->hardwareRev,tmpData);
+-                DbgLogInfo(("Hardware Revision: %s.\n",tmpData));
++                DbgLogInfo(("Hardware Revision: %s.\n",tmpData));
+                 break;
+             case NI_PCB_SKU       :
+                 pBoardInfo->pcbSKU = tmpData[1]&0xff;
+                 pBoardInfo->pcbSKU |= tmpData[0]<<8;
+-                DbgLogInfo(("PCB SKU : %d.\n",pBoardInfo->pcbSKU));
++                DbgLogInfo(("PCB SKU : %d.\n",pBoardInfo->pcbSKU));
+                 break;
+             case NI_PCB_SN        :
+                 pBoardInfo->pcbSN= tmpData[1]&0xff;
+                 pBoardInfo->pcbSN |= tmpData[0]<<8;
+-                DbgLogInfo(("PCB SN : %d.\n",pBoardInfo->pcbSN));
++                DbgLogInfo(("PCB SN : %d.\n",pBoardInfo->pcbSN));
+                 break;
+             case NI_MAIN_CPU      :
+                 strcpy(pBoardInfo->mainCPU,tmpData);
+-                DbgLogInfo(("Main CPU on the PCB: %s.\n",tmpData));
++                DbgLogInfo(("Main CPU on the PCB: %s.\n",tmpData));
+                 break;
+             case NI_ADDI_CPUS     :
+                 pBoardInfo->additionalCPUs= tmpData[1]&0xff;
+                 pBoardInfo->additionalCPUs |= tmpData[0]<<8;
+-                DbgLogInfo(("Number of addtitional CPUs on the PCB: %d.\n",pBoardInfo->additionalCPUs));
++                DbgLogInfo(("Number of addtitional CPUs on the PCB: %d.\n",pBoardInfo->additionalCPUs));
+                 break;
+             case NI_ADDI_CPUS_TYPE:
+                 strcpy(pBoardInfo->additionalCPUsType,tmpData);
+-                DbgLogInfo(("Type of additional CPUs: %s.\n",tmpData));
++                DbgLogInfo(("Type of additional CPUs: %s.\n",tmpData));
+                 break;
+             case NI_CHIP_REV      :
+                 strcpy(pBoardInfo->magnumChipRev,tmpData);
+-                DbgLogInfo(("Magnum Chip revision : %s.\n",tmpData));
++                DbgLogInfo(("Magnum Chip revision : %s.\n",tmpData));
+                 break;
+             case NI_DRAM          :
+                 strcpy(pBoardInfo->dram,tmpData);
+-                DbgLogInfo(("DRAM used with Magnum Chip: %s.\n",tmpData));
++                DbgLogInfo(("DRAM used with Magnum Chip: %s.\n",tmpData));
+                 break;
+             case NI_CORE_VOLTAGE  :
+                 pBoardInfo->coreVoltage= tmpData[1]&0xff;
+                 pBoardInfo->coreVoltage |= tmpData[0]<<8;
+-                DbgLogInfo(("Core Voltage for Magnum Chip in mV: %d.\n",pBoardInfo->coreVoltage));
++                DbgLogInfo(("Core Voltage for Magnum Chip in mV: %d.\n",pBoardInfo->coreVoltage));
+                 break;
+             case NI_MAX_MIPS_FREQ :
+                 pBoardInfo->maxMipsFreq= tmpData[1]&0xff;
+                 pBoardInfo->maxMipsFreq|= tmpData[0]<<8;
+-                DbgLogInfo(("max. MIPS System Frequency in MHz : %d.\n",pBoardInfo->maxMipsFreq));
++                DbgLogInfo(("max. MIPS System Frequency in MHz : %d.\n",pBoardInfo->maxMipsFreq));
+                 break;
+             case NI_MAX_SPARC_FREQ:
+                 pBoardInfo->maxSparcFreq= tmpData[1]&0xff;
+                 pBoardInfo->maxSparcFreq |= tmpData[0]<<8;
+-                DbgLogInfo(("max. SPARC System Frequency in MHz : %d.\n",pBoardInfo->maxSparcFreq));
++                DbgLogInfo(("max. SPARC System Frequency in MHz : %d.\n",pBoardInfo->maxSparcFreq));
+                 break;
+             case NI_DRAM_FREQ     :
+                 pBoardInfo->dramFreq= tmpData[1]&0xff;
+                 pBoardInfo->dramFreq |= tmpData[0]<<8;
+-                DbgLogInfo(("max. DDR DRAM Clock Frequency in MHz: %d.\n",pBoardInfo->dramFreq));
++                DbgLogInfo(("max. DDR DRAM Clock Frequency in MHz: %d.\n",pBoardInfo->dramFreq));
+                 break;
+             case NI_DRAM_SIZE     :
+                 pBoardInfo->dramSize= tmpData[1]&0xff;
+                 pBoardInfo->dramSize|= tmpData[0]<<8;
+-                DbgLogInfo(("DRAM Size in MByte : %d.\n",pBoardInfo->dramSize));
++                DbgLogInfo(("DRAM Size in MByte : %d.\n",pBoardInfo->dramSize));
+                 break;
+             case NI_ECO           :
+                 strcpy((char *)(pBoardInfo->eco), tmpData);
+-                DbgLogInfo(("List of applied ECOs for this hardware revision : \n"));
++                DbgLogInfo(("List of applied ECOs for this hardware revision : \n"));
+ 				i = 0;
+                 while(tmpData[i]!=0)
+                 {
+-                    DbgLogInfo(("%d \n",tmpData[i]));
++                    DbgLogInfo(("%d \n",tmpData[i]));
+                     if(tmpData[i]==8)   //sbp frequence is 30MHz
+                     {
+                         pUsbConfig->sbp_freq = p_mchip->gSbpFreq = SBP_FREQ_30;
+-						DbgLogInfo((" gSbpFreq == SBP_FREQ_30\n"));
++						DbgLogInfo((" gSbpFreq == SBP_FREQ_30\n"));
+                     }
+                     else if(tmpData[i]==9) 
+                     {
+                         pBoardInfo->dxt_clk = DXT_CLK_24;
+-						DbgLogInfo((" dxt_clk == DXT_CLK_24\n"));
++						DbgLogInfo((" dxt_clk == DXT_CLK_24\n"));
+                     }
+                     i++;
+                 }
+-                //DbgLogInfo(("\n"));
++                //DbgLogInfo(("\n"));
+ 				
+                 break;
+             case NI_MAX           :
+             default:
+-                DbgLogInfo(("USB_GetBoardInfo() Unknown nameplate value=%d\n", nameplate));
++                DbgLogInfo(("USB_GetBoardInfo() Unknown nameplate value=%d\n", nameplate));
+                 break;
+         }
+     }
+@@ -186,7 +186,7 @@ HWAPIErrCode USB_GetBoardInfo (USBDevHandle hDevice, BOARD_INFO *pBoardInfo)
+ 
+ HWAPIErrCode USB_BoardInit (USBDevHandle hDevice, DRAM_BKV_CONFIG* bkv)
+ {
+-	DbgLogInfo(("USB_BoardInit(%p)\n", hDevice));
++	DbgLogInfo(("USB_BoardInit(%p)\n", hDevice));
+ 
+     usb_config_st *pUsbConfig = (usb_config_st*)hDevice;
+ 	USBBootMChip_t *p_mchip = pUsbConfig->p_mchip;
+@@ -287,11 +287,11 @@ HWAPIErrCode USB_BoardInit (USBDevHandle hDevice, DRAM_BKV_CONFIG* bkv)
+ 		}
+ 	}
+ #endif
+-    DbgLogInfo(("MCHIP: Host Version (via CBus) = 0x%08x\n", ver32));
++    DbgLogInfo(("MCHIP: Host Version (via CBus) = 0x%08x\n", ver32));
+     // should have the same value as when read from host
+     if (ver16 != (ver32 & 0x0000ffff)) //RMV
+     {
+-        DbgLogError(("MCHIP: %d: Host Version different via Host (0x%04x) and CBus (0x%08x)\n", __LINE__, ver16, ver32));
++        DbgLogError(("MCHIP: %d: Host Version different via Host (0x%04x) and CBus (0x%08x)\n", __LINE__, ver16, ver32));
+         goto EXIT;
+     }
+     if (ver16 != ver32)
+@@ -301,14 +301,14 @@ HWAPIErrCode USB_BoardInit (USBDevHandle hDevice, DRAM_BKV_CONFIG* bkv)
+ 
+     // check MConfig, Bond_Option bits
+     if (!p_mchip->MCHIP_Read32(0xFFC20020, &val32)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+-    DbgLogInfo(("MCHIP: ByPassPLLMCfgReg (via CBus) = 0x%08x\n", val32));
+-    DbgLogInfo(("MCHIP: MConfig[3:0] = 0x%x\n", (val32 >> 7) & 0xF));
+-    DbgLogInfo(("MCHIP: Bond_Option[2:0] = 0x%x\n", (val32 >> 3) & 0x7));
++    DbgLogInfo(("MCHIP: ByPassPLLMCfgReg (via CBus) = 0x%08x\n", val32));
++    DbgLogInfo(("MCHIP: MConfig[3:0] = 0x%x\n", (val32 >> 7) & 0xF));
++    DbgLogInfo(("MCHIP: Bond_Option[2:0] = 0x%x\n", (val32 >> 3) & 0x7));
+     // TODO: could check these for suitability
+     // require Bond_Option[0] = 1 to enable ASBP0, ASBP1 pins
+     if (!((val32 >> 3) & 0x1))
+     {
+-        DbgLogError(("MCHIP: ERROR %d: Bond_Option[0] = 0, ASBP0/ASBP1 not enabled\n"));
++        DbgLogError(("MCHIP: ERROR %d: Bond_Option[0] = 0, ASBP0/ASBP1 not enabled\n"));
+         goto EXIT;
+     }
+ 
+@@ -332,7 +332,7 @@ HWAPIErrCode USB_BoardInit (USBDevHandle hDevice, DRAM_BKV_CONFIG* bkv)
+ 
+ #ifndef HAUPPAUGE
+     // set LED off for now
+-    DbgLogInfo(("clearing LED:\n"));
++    DbgLogInfo(("clearing LED:\n"));
+     if (!p_mchip->MCHIP_LED_Configure(0)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+ #else
+     // set LED2 on for now
+@@ -343,15 +343,15 @@ HWAPIErrCode USB_BoardInit (USBDevHandle hDevice, DRAM_BKV_CONFIG* bkv)
+     if (!p_mchip->MCHIP_DRAM_BKV_Init(bkv)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+ 
+     if (!p_mchip->MCHIP_Read32(0xFFC20048, &val32)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+-    DbgLogInfo(("MCHIP: SysPLLCtrlReg=0x%08x\n", val32));
++    DbgLogInfo(("MCHIP: SysPLLCtrlReg=0x%08x\n", val32));
+     if (!p_mchip->MCHIP_Read32(0xFFC2004C, &val32)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+-    DbgLogInfo(("MCHIP: MemPLLCtrlReg=0x%08x\n", val32));
++    DbgLogInfo(("MCHIP: MemPLLCtrlReg=0x%08x\n", val32));
+     if (!p_mchip->MCHIP_Read32(0xFFC20000, &val32)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+-    DbgLogInfo(("MCHIP: PwrMgtReg=0x%08x\n", val32));
++    DbgLogInfo(("MCHIP: PwrMgtReg=0x%08x\n", val32));
+     if (!p_mchip->MCHIP_Read32(0xFFC20018, &val32)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+-    DbgLogInfo(("MCHIP: ClkDisableReg=0x%08x\n", val32));
++    DbgLogInfo(("MCHIP: ClkDisableReg=0x%08x\n", val32));
+     if (!p_mchip->MCHIP_Read32(0xFFC20020, &val32)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+-    DbgLogInfo(("MCHIP: ByPassPLLMCfgReg=0x%08x\n", val32));
++    DbgLogInfo(("MCHIP: ByPassPLLMCfgReg=0x%08x\n", val32));
+ 
+ 
+    
+@@ -373,7 +373,7 @@ MCHIP_BOOT:
+     if (!p_mchip->MCHIP_Host_Write16(DMN_HB_ADDR, 0)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+ 
+     // set LED off for now
+-    DbgLogInfo(("clearing LED:\n"));
++    DbgLogInfo(("clearing LED:\n"));
+ #ifndef HAUPPAUGE
+     if (!p_mchip->MCHIP_LED_Configure(0)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+ #else
+@@ -383,13 +383,13 @@ MCHIP_BOOT:
+     //Already configured during LED test above
+ 	//if (!p_mchip->MCHIP_LED_Configure(48, 0)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+ #endif
+-    DbgLogInfo(("\n"));
++    DbgLogInfo(("\n"));
+ 
+     // initialize sys/mem PLL and DRC from loaded BKV
+     if (!p_mchip->MCHIP_DRAM_BKV_Init(bkv)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+ 
+     // set LED on to indicate DRAM initialized
+-    DbgLogInfo(("setting LED:\n"));
++    DbgLogInfo(("setting LED:\n"));
+ #ifndef HAUPPAUGE
+     if (!p_mchip->MCHIP_LED_Configure(1)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+ #else
+@@ -491,7 +491,7 @@ static HWAPIErrCode HCW_BinaryVerify(USBBootMChip_t *p_mchip, const char *fileNa
+ 			DbgLogError((" offset 0x%08x, file: 0x%02x, mem: 0x%02x\n", i, bin[i], buf[i]));
+ 			memfail = 1;
+ 
+-#if 0
++#if 0
+ 			strcpy(dumpfile, fileName);
+ 			strcat(dumpfile, ".ok");
+ 			p_mchip->prv_save_bin(dumpfile, bin, size);//write the good reference file
+@@ -499,7 +499,7 @@ static HWAPIErrCode HCW_BinaryVerify(USBBootMChip_t *p_mchip, const char *fileNa
+ 			strcpy(dumpfile, fileName);
+ 			strcat(dumpfile, ".bad");
+ 			p_mchip->prv_save_bin(dumpfile, buf, size);//write the bad, readback data
+-#endif
++#endif
+ 			break;
+ 		}
+ 	}
+@@ -516,7 +516,7 @@ static HWAPIErrCode HCW_BinaryVerify(USBBootMChip_t *p_mchip, const char *fileNa
+ 
+ HWAPIErrCode USB_BinaryDownload (USBDevHandle hDevice, FIRMWARE_FILE *binary)
+ {
+-	DbgLogInfo(("USB_BinaryDownload(%p, %p)\n", hDevice, binary));
++	DbgLogInfo(("USB_BinaryDownload(%p, %p)\n", hDevice, binary));
+     // load MIPS binary and write its jump instruction
+     usb_config_st *pUsbConfig = (usb_config_st*)hDevice;
+ 	USBBootMChip_t *p_mchip = pUsbConfig->p_mchip;
+@@ -569,46 +569,46 @@ HWAPIErrCode USB_BinaryDownload (USBDevHandle hDevice, FIRMWARE_FILE *binary)
+ 
+ HWAPIErrCode USB_SystemBootup (USBDevHandle hDevice)
+ {
+-	DbgLogInfo(("USB_SystemBootup(%p)\n", hDevice));
++	DbgLogInfo(("USB_SystemBootup(%p)\n", hDevice));
+     usb_config_st *pUsbConfig = (usb_config_st*)hDevice;
+ 	USBBootMChip_t *p_mchip = pUsbConfig->p_mchip;
+     HWAPIErrCode ret = HWAPI_Fail;
+     DWORD start = 0;
+-    Uint16 val16;
++    Uint16 val16;
+     Uint32 val32;
+ 	DWORD dwUSB_SystemBootupDelay = 750; //FGR - BUGBUG - what's a resonable value here (was 2000)??
+ 
+     if (!p_mchip->MCHIP_Binary_BootMIPS()) 
+     {
+-        DbgLogError(("MIPS Binary boot failure.\n"));
+-        goto EXIT;
+-    }
++        DbgLogError(("MIPS Binary boot failure.\n"));
++        goto EXIT;
++    }
+ 
+     wrapSleep_ms(125);
+ 
+-    if (!p_mchip->MCHIP_Host_Read16(DMN_HB_CONTROL, &val16)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+-	DbgLogInfo(("MCHIP: Host Control = 0x%04x\n", val16));
++    if (!p_mchip->MCHIP_Host_Read16(DMN_HB_CONTROL, &val16)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
++	DbgLogInfo(("MCHIP: Host Control = 0x%04x\n", val16));
+ 
+     if (!p_mchip->MCHIP_Binary_BootSystemSPARC()) return HWAPI_Fail;
+ 
+     // check that MCHIP Host Control Register shows System SPARC running and not errored
+     if (!p_mchip->MCHIP_Host_Read16(DMN_HB_CONTROL, &val16)) {DbgLogError(("!!!%d\n",__LINE__));goto EXIT;}
+-    DbgLogInfo(("MCHIP: Host Control = 0x%04x\n", val16));
++    DbgLogInfo(("MCHIP: Host Control = 0x%04x\n", val16));
+     if (val16 & DMN_HB_HC_SCPU_RST)
+     {
+-        DbgLogError(("MCHIP: ERROR %d: SCPU_Rst set after image boot\n", __LINE__));
++        DbgLogError(("MCHIP: ERROR %d: SCPU_Rst set after image boot\n", __LINE__));
+         goto EXIT;
+     }
+     if (val16 & DMN_HB_HC_SCPU_ERR)
+     {
+-        DbgLogError(("MCHIP: ERROR %d: SCPU_Err set after image boot\n", __LINE__));
++        DbgLogError(("MCHIP: ERROR %d: SCPU_Err set after image boot\n", __LINE__));
+         goto EXIT;
+     }
+ 
+     // check that image is running
+     // expect the image to enable some of the INTREQ1 hardware interrupt
+     // sources on system SPARC, for example, watchdog and timer interrupts
+-
++
+ 	start = wrapGetTicks_ms();
+     for (;;)
+     {
+@@ -622,7 +622,7 @@ HWAPIErrCode USB_SystemBootup (USBDevHandle hDevice)
+         // timed out?
+         if (wrapGetTicks_ms() - start > MCHIP_BOOT_TIMEOUT)
+         {
+-            DbgLogError(("MCHIP: ERROR %d: image not running\n", __LINE__));
++            DbgLogError(("MCHIP: ERROR %d: image not running\n", __LINE__));
+             goto EXIT;
+         }
+ 		wrapSleep_ms(10);
+@@ -635,7 +635,7 @@ HWAPIErrCode USB_SystemBootup (USBDevHandle hDevice)
+ 	if(dwUSB_SystemBootupDelay){
+ 		wrapSleep_ms(dwUSB_SystemBootupDelay);
+ 	}
+-    DbgLogInfo(("USB_SystemBootup() after image startup delay (%ums)\n", dwUSB_SystemBootupDelay));
++    DbgLogInfo(("USB_SystemBootup() after image startup delay (%ums)\n", dwUSB_SystemBootupDelay));
+ 
+     // all tests OK
+     ret = HWAPI_Success;
+@@ -661,7 +661,7 @@ EXIT:
+ 
+ HWAPIErrCode USB_Exit (USBDevHandle hDevice)
+ {
+-	DbgLogInfo(("USB_Exit(%p)\n", hDevice));
++	DbgLogInfo(("USB_Exit(%p)\n", hDevice));
+ 
+     if(hDevice!=NULL)
+     {
+@@ -672,13 +672,13 @@ HWAPIErrCode USB_Exit (USBDevHandle hDevice)
+ #if 0//FGR - this will get done, after DXT is isolated from video bus, in CHapi::powerDownHW()
+ 			if (!p_mchip->MCHIP_PortA_Set_POWER_ENABLE_H(0))
+ 			{
+-				DbgLogError(("USB_Exit() MCHIP_PortA_Set_POWER_ENABLE_H() FAILED!!\n"));
++				DbgLogError(("USB_Exit() MCHIP_PortA_Set_POWER_ENABLE_H() FAILED!!\n"));
+ 			}
+ 			p_mchip->MCHIP_PortA_Set_MCHIP_RESET_L(0);
+ 			wrapSleep_ms(30);
+ #endif
+ 		} else {
+-			DbgLogError(("USB_Exit() p_mchip==NULL!!\n"));
++			DbgLogError(("USB_Exit() p_mchip==NULL!!\n"));
+ 		}
+ 		pUsbConfig->p_mchip = NULL; //assume caller will delete the actual USBBootMChip_t class
+ 
+@@ -687,7 +687,7 @@ HWAPIErrCode USB_Exit (USBDevHandle hDevice)
+     }
+     else
+     {
+-		DbgLogError(("USB_Exit() hDevice==NULL!!\n"));
++		DbgLogError(("USB_Exit() hDevice==NULL!!\n"));
+         return HWAPI_Fail;
+     }
+     return HWAPI_Success;
+@@ -698,14 +698,14 @@ HWAPIErrCode USB_Receive(USBDevHandle hDevice, Uint8 *buf, Uint32 size)
+     usb_config_st *pUsbConfig = (usb_config_st*)hDevice;
+ 	USBBootMChip_t *p_mchip = pUsbConfig->p_mchip;
+ 	p_mchip->lockBus();
+-
++
+ 	if(!p_mchip->MCHIP_SBP_Select()){
+ 		p_mchip->unlockBus();
+ 		return HWAPI_Fail;
+ 	}
+ 	int ret = p_mchip->UsbParIn((char*)buf, size);
+ 	p_mchip->unlockBus();
+-
++
+ 	if(1 == ret)
+ 		return HWAPI_Success;
+ 	else
+@@ -718,7 +718,7 @@ HWAPIErrCode USB_Send (USBDevHandle hDevice, Uint8 *buf, Uint32 size)
+     usb_config_st *pUsbConfig = (usb_config_st*)hDevice;
+ 	USBBootMChip_t *p_mchip = pUsbConfig->p_mchip;
+ 	p_mchip->lockBus();
+-	//DbgLogInfo(("USB_Send: buf:0x%x, size:%d\n", buf, size));
++	//DbgLogInfo(("USB_Send: buf:0x%x, size:%d\n", buf, size));
+ 	if(!p_mchip->MCHIP_SBP_Select()){
+ 		p_mchip->unlockBus();
+ 		return HWAPI_Fail;
+@@ -726,7 +726,7 @@ HWAPIErrCode USB_Send (USBDevHandle hDevice, Uint8 *buf, Uint32 size)
+ 
+ 	int ret = p_mchip->UsbParOut((char*)buf, size);
+ 	p_mchip->unlockBus();
+-
++
+ 	if(1 == ret)
+ 		return HWAPI_Success;
+ 	else

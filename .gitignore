@@ -1,0 +1,6 @@
+hdpvr2_ver7
+*.bin
+*.ts
+*.cfg
+FX2Firmware.cpp
+mchip_binary.cpp

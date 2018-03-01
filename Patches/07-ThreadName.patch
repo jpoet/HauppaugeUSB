@@ -1,0 +1,67 @@
+--- a/Common/EncoderDev/HAPIHost/mchip_utils-orig.h	2018-02-23 15:20:33.674544726 -0700
++++ b/Common/EncoderDev/HAPIHost/mchip_utils.h	2018-02-23 15:20:51.277242667 -0700
+@@ -109,10 +109,11 @@
+  * 
+  * input:       pFunc - func to start
+  *              pData - data to pass to the function
++ *              pName - name of thread
+  *
+  * output:      phThread - handle to the thread
+  *****************************************************************/
+-dxErrCode UtilThreadStart(DX_THREAD_HANDLE *phThread, DX_UTIL_THREAD_FUNC pFunc, void *pData);
++dxErrCode UtilThreadStart(DX_THREAD_HANDLE *phThread, DX_UTIL_THREAD_FUNC pFunc, void *pData, const char *pName);
+ 
+ /*****************************************************************
+  * Function:    UtilThreadWait
+--- a/Common/EncoderDev/HAPIHost/mchip_utils-orig.cpp	2018-02-23 15:20:39.970436690 -0700
++++ b/Common/EncoderDev/HAPIHost/mchip_utils.cpp	2018-02-23 15:20:56.929145682 -0700
+@@ -163,8 +163,8 @@
+ /*****************************************************************
+  * Function:    UtilThreadStart
+  *****************************************************************/
+-dxErrCode UtilThreadStart(DX_THREAD_HANDLE *phThread, DX_UTIL_THREAD_FUNC pFunc, void *pData){
+-	int err = wrapThreadStart(phThread, pFunc, pData);
++dxErrCode UtilThreadStart(DX_THREAD_HANDLE *phThread, DX_UTIL_THREAD_FUNC pFunc, void *pData, const char *pName){
++        int err = wrapThreadStart(phThread, pFunc, pData, pName);
+ 	if(err != WRAPOS_OK) {
+ 		return DX_ERR_UNKNOWN;
+ 	}
+--- a/Common/EncoderDev/HAPIHost/Hapi-orig.cpp	2018-02-23 15:22:58.491059702 -0700
++++ b/Common/EncoderDev/HAPIHost/Hapi.cpp	2018-02-23 15:26:10.357767304 -0700
+@@ -2026,30 +2026,30 @@
+ 		return HAPI_FAIL;
+ 	}
+ 
+-	if(UtilThreadStart(&handle->cmdThread, cmdThreadFunc, handle ) != DX_SUCCESS)
++	if(UtilThreadStart(&handle->cmdThread, cmdThreadFunc, handle, "HAPI-cmd" ) != DX_SUCCESS)
+ 		return HAPI_FAIL;
+ 
+-    if(UtilThreadStart(&handle->mainThread, mainThreadFunc, handle ) != DX_SUCCESS)
++	if(UtilThreadStart(&handle->mainThread, mainThreadFunc, handle, "HAPI-main" ) != DX_SUCCESS)
+ 		return HAPI_FAIL;
+ 
+-    if(UtilThreadStart(&handle->callbackThread, callbackThreadFunc, handle ) != DX_SUCCESS)
++	if(UtilThreadStart(&handle->callbackThread, callbackThreadFunc, handle, "HAPI-callback" ) != DX_SUCCESS)
+ 		return HAPI_FAIL;
+ 		
+ #ifndef AV_ASI
+  #ifndef HAUPPAUGE
+-	if(UtilThreadStart(&handle->dataThread, dataThreadFunc,handle ) != DX_SUCCESS)
++	if(UtilThreadStart(&handle->dataThread, dataThreadFunc,handle, "HAPI-data" ) != DX_SUCCESS)
+ 		return HAPI_FAIL;
+  #else
+ 	//FGR - why have two threads using the same underlying USB interface
+ 	if(handle->cmdBus != handle->dataBus)
+ 	{
+-		if(UtilThreadStart(&handle->dataThread, dataThreadFunc,handle ) != DX_SUCCESS)
++	  if(UtilThreadStart(&handle->dataThread, dataThreadFunc,handle, "HAPI-data" ) != DX_SUCCESS)
+ 			return HAPI_FAIL;
+ 	}
+  #endif
+ 
+  #ifdef USE_WRITE_THREAD
+-	if(UtilThreadStart(&handle->writeThread, writeThreadFunc, handle ) != DX_SUCCESS)
++	if(UtilThreadStart(&handle->writeThread, writeThreadFunc, handle, "HAPI-write" ) != DX_SUCCESS)
+ 		return HAPI_FAIL;
+  #endif
+ #endif
