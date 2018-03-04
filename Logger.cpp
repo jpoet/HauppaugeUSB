@@ -18,8 +18,7 @@
  * along with HauppaugeUSB.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define CONFIG_SYSTEMD_JOURNAL 1
-
+//#define CONFIG_SYSTEMD_JOURNAL 0
 #if CONFIG_SYSTEMD_JOURNAL
 #define SD_JOURNAL_SUPPRESS_LOCATION 1 // Manage location ourselves.
 #include <systemd/sd-journal.h>

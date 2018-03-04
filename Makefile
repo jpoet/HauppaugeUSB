@@ -34,9 +34,9 @@ REC_CXX = g++
 REC_CXXFLAGS := -g -c -Wall -std=c++11 -fdiagnostics-color -DBOOST_LOG_DYN_LINK ${CFLAGS}
 REC_LDFLAGS =
 
-#REC_CXXFLAGS += `pkg-config --cflags libusb-1.0`
+#	        `pkg-config --libs libsystemd` \
+
 REC_LDFLAGS  += `pkg-config --libs libusb-1.0` \
-	        `pkg-config --libs libsystemd` \
 	        -lpthread
 
 REC_SOURCES = Logger.cpp Common.cpp MythTV.cpp HauppaugeDev.cpp hauppauge2.cpp
