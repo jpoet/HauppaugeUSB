@@ -109,6 +109,7 @@ with your HDMI video.  When I asked Hauppauge about this, they said:
  > 1) I2S PCM audio from HDMI
  > 2) I2S PCM Audio from CX28010 (L/R Stereo baseband audio in)
  > 3) I2S “S/PDIF” Digital Audio via the CS8416 (could be from either external S/PDIF connector, or from 7842 HDMI based on 8416 source settings)
+ >
 > All AC-3 Audio happens via Path 3; you need to set the proper input on the CS8416, but the I2S bus (selected via “Port E”) would be the same as for the S/PDIF connector.
 > 
 > NOTE: You also need to update the EDID to actually claim it supports AC-3 on the HDMI port; if you look at the unit running under Windows you will see the EDID change if AC-3 is set to be allowed in our apps.
@@ -269,3 +270,10 @@ echo "auto" | sudo dd of="/sys/bus/usb/devices/usb${BUS}/power/control"
 echo "on"   | sudo dd of="/sys/bus/usb/devices/usb${BUS}/power/control"
 ```
 After that, the Colossus2 seems to work reliably until the next reboot.
+
+### Review of issues
+
+A user on the MythTV forum has posted a detailed review of possible issues:
+
+https://forum.mythtv.org/viewtopic.php?f=2&t=2417&sid=91dea4e835b50e7564e37eda049773dd
+

@@ -132,6 +132,9 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
                         << flush;
 
     bool spdif = (m_params.audioInput == HAPI_AUDIO_CAPTURE_SOURCE_SPDIF);
+    encoderAudioInFormat_t audioFormat =
+        (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3 ? ENCAIF_AC3
+         : ENCAIF_AUTO);
 
     audio_CS8416 audio_CS8416(*m_fx2);
 
@@ -163,7 +166,10 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
             case HAPI_AUDIO_CAPTURE_SOURCE_HDMI:
             {
                 audio_CS8416.reset(audio_CS8416::AudioInput::HDMI);
-                m_fx2->setPortStateBits(FX2_PORT_E, 0, 0x18);
+                if (audioFormat == ENCAIF_AC3)
+                    m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
+                else
+                    m_fx2->setPortStateBits(FX2_PORT_E, 0, 0x18);
                 LOG(Logger::NOTICE) << "Audio Input: HDMI" << flush;
                 break;
             }
@@ -189,43 +195,17 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         }
     }
 
-    encoderAudioInFormat_t audioFormat =
-        (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3 ? ENCAIF_AC3
-         : ENCAIF_AUTO);
+    LOG(Logger::NOTICE) << "Audio codec: "
+                        << (audioFormat == ENCAIF_AC3 ? "AC3" : "AUTO")
+                        << flush;
 
     if(!m_encDev->setInputFormat(source, audioFormat,
-                              width, height, interlaced,
-                              vFreq, aspectRatio, audioSampleRate))
+                                 width, height, interlaced,
+                                 vFreq, aspectRatio, audioSampleRate))
     {
         LOG(Logger::CRIT) << "Cannot set video mode" << flush;
         return false;
     }
-
-
-
-#if 0
-#if 1
- // With AC3 support
-    encoderAudioInFormat_t audioFormat =
-        (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3 ? ENCAIF_AC3 : ENCAIF_PCM);
-
-    if (!m_encDev->setInputFormat(m_fx2, source, audioFormat, width, height,
-                               interlaced, vFreq, aspectRatio,
-                               audioSampleRate))
-    {
-        LOG(Logger::CRIT) << "Cannot set video mode" << flush;
-        return false;
-    }
-#else
-    if (!m_encDev->setInputFormat(m_fx2, source, width, height,
-                               interlaced, vFreq, aspectRatio,
-                               audioSampleRate))
-    {
-        LOG(Logger::CRIT) << "Cannot set video mode" << flush;
-        return false;
-    }
-#endif
-#endif
 
     return true;
 }
@@ -473,20 +453,20 @@ bool HauppaugeDev::open_file(const string & file_name)
 
 void HauppaugeDev::log_ports(void)
 {
-    LOG(Logger::DEBUG) << hex
-                       << "\nPORT_A: [0x" << m_fx2->getPortDir(FX2_PORT_A)
-                       << "] 0x" << m_fx2->getPortState(FX2_PORT_A) << '\n'
-                       << "PORT_B: [0x" <<  m_fx2->getPortDir(FX2_PORT_B) << "] "
-                       << "0x" << m_fx2->getPortState(FX2_PORT_B) << '\n'
-                       << "PORT_C: [0x" << m_fx2->getPortDir(FX2_PORT_C) << "] "
-                       << "0x" << m_fx2->getPortState(FX2_PORT_C) << '\n'
-                       << "PORT_D: [0x" << m_fx2->getPortDir(FX2_PORT_D) << "] "
-                       << "0x" << m_fx2->getPortState(FX2_PORT_D) << '\n'
-                       << "PORT_E: [0x" << m_fx2->getPortDir(FX2_PORT_E) << "] "
-                       << "0x" << m_fx2->getPortState(FX2_PORT_E) << '\n'
-                       << "CTL_PORTS: [0x" << m_fx2->getPortDir(FX2_CTL_PORTS)
-                       << "] 0x" << m_fx2->getPortState(FX2_CTL_PORTS)
-                       << dec << flush;
+    LOG(Logger::INFO) << hex
+                      << "\nPORT_A: [0x" << m_fx2->getPortDir(FX2_PORT_A)
+                      << "] 0x" << m_fx2->getPortState(FX2_PORT_A) << '\n'
+                      << "PORT_B: [0x" <<  m_fx2->getPortDir(FX2_PORT_B) << "] "
+                      << "0x" << m_fx2->getPortState(FX2_PORT_B) << '\n'
+                      << "PORT_C: [0x" << m_fx2->getPortDir(FX2_PORT_C) << "] "
+                      << "0x" << m_fx2->getPortState(FX2_PORT_C) << '\n'
+                      << "PORT_D: [0x" << m_fx2->getPortDir(FX2_PORT_D) << "] "
+                      << "0x" << m_fx2->getPortState(FX2_PORT_D) << '\n'
+                      << "PORT_E: [0x" << m_fx2->getPortDir(FX2_PORT_E) << "] "
+                      << "0x" << m_fx2->getPortState(FX2_PORT_E) << '\n'
+                      << "CTL_PORTS: [0x" << m_fx2->getPortDir(FX2_CTL_PORTS)
+                      << "] 0x" << m_fx2->getPortState(FX2_CTL_PORTS)
+                      << dec << flush;
 }
 
 bool HauppaugeDev::Open(USBWrapper_t & usbio,
