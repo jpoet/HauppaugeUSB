@@ -53,7 +53,7 @@ REC_LIBS += -lboost_program_options -lboost_log -lboost_log_setup -lboost_system
 all: ${REC_EXE}
 
 ${REC_EXE}: ${REC_OBJECTS} ${REC_LIBS}
-	${REC_CXX} ${REC_OBJECTS} -o $@ ${REC_LDFLAGS} ${REC_LIBS}
+	${REC_CXX} ${REC_OBJECTS} -o $@ ${REC_LIBS} ${REC_LDFLAGS} 
 
 ${REC_OBJECTS}: ${REC_SOURCES}
 

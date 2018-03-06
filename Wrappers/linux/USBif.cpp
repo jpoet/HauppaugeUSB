@@ -55,55 +55,55 @@ bool USBWrapper_t::DevName(string& name, struct libusb_device_descriptor& desc)
     if (desc.idProduct == 0xe504)
     {
         // 157220
-        name = "HD PVR 2 Gaming Edition Plus w/SPDIF";
+        name = "HD PVR 2 Gaming Edition Plus w/SPDIF (Siena2-02)";
         return true;
     }
     if (desc.idProduct == 0xe505)
     {
         // 157320
-        name = "HD PVR 2 Gaming Edition Plus w/SPDIF w/MIC";
+        name = "HD PVR 2 Gaming Edition Plus w/SPDIF w/MIC (Siena2-05a)";
         return true;
     }
     if (desc.idProduct == 0xe524)
     {
         // 157210
-        name = "HD PVR 2 Gaming Edition";
+        name = "HD PVR 2 Gaming Edition (Siena2-02)";
         return true;
     }
     if (desc.idProduct == 0xe514)
     {
         // 157221
-        name = "HD PVR 2 model 1512 w/SPDIF, Alt bling";
+        name = "HD PVR 2 model 1512 w/SPDIF, Alt bling (Siena2-02)";
         return true;
     }
     if (desc.idProduct == 0xe515)
     {
         // 157321
-        name = "HD PVR 2 model 1512 w/SPDIF w/MIC Alt blink";
+        name = "HD PVR 2 model 1512 w/SPDIF w/MIC Alt blink (Siena2-05a)";
         return true;
     }
     if (desc.idProduct == 0xe524)
     {
         // Siena2-02
-        name = "HD PVR 2 (unknown version)";
+        name = "HD PVR 2 (unknown version) (Siena2-02)";
         return true;
     }
     if (desc.idProduct == 0xe525)
     {
         // 157310
-        name = "HD PVR 2 Gaming Edition w/MIC";
+        name = "HD PVR 2 Gaming Edition w/MIC (Siena2-05a)";
         return true;
     }
     if (desc.idProduct == 0xe52c)
     {
         // Siena2 StreamEez
-        name = "HD PVR 2 StreamEez";
+        name = "HD PVR 2 StreamEez (Siena2)";
         return true;
     }
     if (desc.idProduct == 0xe554)
     {
         // 157222
-        name = "HD PVR 2 Gaming Edition Plus w/SPDIF, Blue LEDs";
+        name = "HD PVR 2 Gaming Edition Plus w/SPDIF, Blue LEDs (Siena2-02)";
         return true;
     }
     if (desc.idProduct == 0xe585)

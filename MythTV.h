@@ -25,6 +25,7 @@
 #include "HauppaugeDev.h"
 #include "USBif.h"
 
+#include <atomic>
 #include <string>
 #include <vector>
 #include <queue>
