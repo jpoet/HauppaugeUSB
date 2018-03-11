@@ -17,6 +17,11 @@ This can be used at the command-line as well as an "External Recorder" for MythT
 sudo dnf install make gcc gcc-c++ kernel-devel libstdc++-devel boost-devel libusbx-devel
 ```
 
+#### Ubuntu
+```
+sudo apt-get install libboost-log-dev libboost-programs-options-dev libusb-1.0-0-dev build-essential
+```
+
 #### MythTV
 If you want to use this with MythTV, you will need
 [fixes/29](https://github.com/MythTV/mythtv/tree/fixes/29) from 2018-03-01 or [master](https://github.com/MythTV/mythtv/tree/master) from 2018-02-25.
