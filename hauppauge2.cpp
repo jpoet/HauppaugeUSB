@@ -134,8 +134,10 @@ int main(int argc, char *argv[])
 
     po::options_description config{"Configuration options"};
     config.add_options()
-        ("verbose,v", po::value<int>()->implicit_value(1),
+        ("v", po::value<int>()->implicit_value(1),
          "Verbose state information.")
+        ("verbose", po::value<string>()->default_value("general"),
+         "Mythbuntu verbose.")
         ("input,i", po::value<int>()->default_value(3),
          "Video input (0=COMPOSITE, 1=COMPONENT, 2=SDI, 3=HDMI)")
         ("audio,a", po::value<int>()->default_value(3),
@@ -196,7 +198,10 @@ int main(int argc, char *argv[])
          "levels will be discarded. In descending order: emerg, alert, crit, "
          "err, warning, notice, info, debug")
         ("quiet,q", po::value<int>()->implicit_value(1),
-         "Don't log to the console (-q).");
+         "Don't log to the console (-q).")
+        ("syslog", po::value<string>()->default_value("local7"),
+          "Set the syslog facility code to use for system logging."
+          " This option is silently ignored currently.");
 
     po::options_description config_file{"Config file options"};
     config_file.add_options()
