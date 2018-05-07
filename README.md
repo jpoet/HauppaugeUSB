@@ -32,12 +32,7 @@ ln -s ../hauppauge_hdpvr2_157321_patched_2016-09-26 Hauppauge
 ```
 
 ### Patched the Hauppauge source to get it working
-
-### Rename Common/Rx/ADV7842/Wrapper.c to Wrapper.cpp so it can include c++ headers
-```
-cd ~/src/Hauppauge/HauppaugeUSB/Hauppauge
-mv Common/Rx/ADV7842/Wrapper.c Common/Rx/ADV7842/Wrapper.cpp
-```
+### Renamed Common/Rx/ADV7842/Wrapper.c to Wrapper.cpp so it can include c++ headers
 
 ### Build it
 The installation directory tree is currently hard-coded to be /opt/Hauppauge.
