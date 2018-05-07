@@ -30,7 +30,6 @@ sudo apt-get install libboost-log-dev libboost-programs-options-dev libusb-1.0-0
 ### Build it
 The installation directory tree is currently hard-coded to be /opt/Hauppauge.
 ```
-cd ~/src/Hauppauge/HauppaugeUSB
 make
 sudo make install
 ```
