@@ -31,20 +31,7 @@ cd ~/src/Hauppauge/HauppaugeUSB
 ln -s ../hauppauge_hdpvr2_157321_patched_2016-09-26 Hauppauge
 ```
 
-### Patch the Hauppauge source to get it working
-```
-cd ~/src/Hauppauge/HauppaugeUSB/Hauppauge
-for fl in 01-NewLine.patch \
-          02-string.patch \
-          03-EnableRegisteredParameters.patch \
-          04-SplitLoggingLevels.patch \
-          05-FirmwareLocation.patch \
-          06-AVOutputCallback.patch \
-          07-ThreadName.patch
-do
-        patch -p1 < ~/src/Hauppauge/HauppaugeUSB/Patches/"${fl}"
-done
-```
+### Patched the Hauppauge source to get it working
 
 ### Rename Common/Rx/ADV7842/Wrapper.c to Wrapper.cpp so it can include c++ headers
 ```
