@@ -24,13 +24,6 @@ sudo apt-get install libboost-log-dev libboost-programs-options-dev libusb-1.0-0
 
 #### This version is not inteded for use with MythTV, but rather the SnapTV plugin system, where this stream is sent into a pipe (fifo)
 ### Grabbed the "driver" from Hauppauge into the submodule hauppauge_hdpvr2
-
-### Link the Hauppauge source tree
-```
-cd ~/src/Hauppauge/HauppaugeUSB
-ln -s ../hauppauge_hdpvr2_157321_patched_2016-09-26 Hauppauge
-```
-
 ### Patched the Hauppauge source to get it working
 ### Renamed Common/Rx/ADV7842/Wrapper.c to Wrapper.cpp so it can include c++ headers
 
