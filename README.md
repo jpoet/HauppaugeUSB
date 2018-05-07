@@ -22,23 +22,8 @@ sudo dnf install make gcc gcc-c++ kernel-devel libstdc++-devel boost-devel libus
 sudo apt-get install libboost-log-dev libboost-programs-options-dev libusb-1.0-0-dev build-essential
 ```
 
-#### MythTV
-If you want to use this with MythTV, you will need
-[fixes/29](https://github.com/MythTV/mythtv/tree/fixes/29) from 2018-03-01 or [master](https://github.com/MythTV/mythtv/tree/master) from 2018-02-25.
-
-### Grab the "driver" from Hauppauge
-```
-mkdir -p ~/src/Hauppauge
-cd ~/src/Hauppauge
-curl -O https://s3.amazonaws.com/hauppauge/linux/hauppauge_hdpvr2_157321_patched_2016-09-26.tar.gz
-tar -xzf hauppauge_hdpvr2_157321_patched_2016-09-26.tar.gz
-```
-
-### Grab this repository
-```
-cd ~/src/Hauppauge
-git clone https://github.com/jpoet/HauppaugeUSB.git
-```
+#### This version is not inteded for use with MythTV, but rather the SnapTV plugin system, where this stream is sent into a pipe (fifo)
+### Grabbed the "driver" from Hauppauge into the submodule hauppauge_hdpvr2
 
 ### Link the Hauppauge source tree
 ```
