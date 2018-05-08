@@ -23,9 +23,10 @@ sudo apt-get install libboost-log-dev libboost-programs-options-dev libusb-1.0-0
 ```
 
 #### This version is not inteded for use with MythTV, but rather the SnapTV plugin system, where this stream is sent into a pipe (fifo)
-### Grabbed the "driver" from Hauppauge into the submodule hauppauge_hdpvr2
-### Patched the Hauppauge source to get it working
-### Renamed Common/Rx/ADV7842/Wrapper.c to Wrapper.cpp so it can include c++ headers
+### Grab the prepared "driver" from Hauppauge into the submodule hauppauge_hdpvr2
+```
+git submodule update --init
+```
 
 ### Build it
 The installation directory tree is currently hard-coded to be /opt/Hauppauge.
@@ -75,9 +76,9 @@ with your HDMI video.  When I asked Hauppauge about this, they said:
  > 3) I2S “S/PDIF” Digital Audio via the CS8416 (could be from either external S/PDIF connector, or from 7842 HDMI based on 8416 source settings)
  >
 > All AC-3 Audio happens via Path 3; you need to set the proper input on the CS8416, but the I2S bus (selected via “Port E”) would be the same as for the S/PDIF connector.
-> 
+>
 > NOTE: You also need to update the EDID to actually claim it supports AC-3 on the HDMI port; if you look at the unit running under Windows you will see the EDID change if AC-3 is set to be allowed in our apps.
-> 
+>
 > Also, even if you allow it, there’s no promise that the HDMI source will  use it (it may not even be AC-3 capable), so you would have to detect in the code if AC-3 is actually present and switch from the normal PCM audio path(case #1) from 7842 to the AC-3 audio path via 8416 (case #3).  This can change dynamically with content depending on the HDMI source device; so you probably have to poll for any changes.
 
 Also, `-i 1 -a 1 -d 2` does not currently get you AC3 via S/PDIF with your
@@ -94,14 +95,14 @@ $ /opt/Hauppauge/bin/hauppauge2 --list
 Number of possible configurations: 1  Device Class: 0  VendorID: 8256  ProductID: 58757
 Manufacturer: Hauppauge
 Serial: E585-00-00AF4321
-Interfaces: 1 ||| Number of alternate settings: 1 | Interface Number: 0 | Number of endpoints: 6 | Descriptor Type: 5 | EP Address: 129 | Descriptor Type: 5 | EP Address: 132 | Descriptor Type: 5 | EP Address: 136 | Descriptor Type: 5 | EP Address: 1 | Descriptor Type: 5 | EP Address: 2 | Descriptor Type: 5 | EP Address: 134 | 
+Interfaces: 1 ||| Number of alternate settings: 1 | Interface Number: 0 | Number of endpoints: 6 | Descriptor Type: 5 | EP Address: 129 | Descriptor Type: 5 | EP Address: 132 | Descriptor Type: 5 | EP Address: 136 | Descriptor Type: 5 | EP Address: 1 | Descriptor Type: 5 | EP Address: 2 | Descriptor Type: 5 | EP Address: 134 |
 
 
 [Bus: 3 Port: 4]  2040:0xe505 E505-00-00AF1234 HD PVR 2 Gaming Edition Plus w/SPDIF w/MIC
 Number of possible configurations: 1  Device Class: 0  VendorID: 8256  ProductID: 58629
 Manufacturer: Hauppauge
 Serial: E505-00-00AF1234
-Interfaces: 1 ||| Number of alternate settings: 1 | Interface Number: 0 | Number of endpoints: 6 | Descriptor Type: 5 | EP Address: 129 | Descriptor Type: 5 | EP Address: 132 | Descriptor Type: 5 | EP Address: 136 | Descriptor Type: 5 | EP Address: 1 | Descriptor Type: 5 | EP Address: 2 | Descriptor Type: 5 | EP Address: 134 | 
+Interfaces: 1 ||| Number of alternate settings: 1 | Interface Number: 0 | Number of endpoints: 6 | Descriptor Type: 5 | EP Address: 129 | Descriptor Type: 5 | EP Address: 132 | Descriptor Type: 5 | EP Address: 136 | Descriptor Type: 5 | EP Address: 1 | Descriptor Type: 5 | EP Address: 2 | Descriptor Type: 5 | EP Address: 134 |
 ```
 #### Capture from HDMI video and S/PDIF audio with AC-3 codec
 ```
@@ -240,4 +241,3 @@ After that, the Colossus2 seems to work reliably until the next reboot.
 A user on the MythTV forum has posted a detailed review of possible issues:
 
 https://forum.mythtv.org/viewtopic.php?f=2&t=2417&sid=91dea4e835b50e7564e37eda049773dd
-
