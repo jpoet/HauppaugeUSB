@@ -275,6 +275,9 @@ bool HauppaugeDev::init_cvbs(void)
 
     m_rxDev->setOutputBusMode(RXOBM_656_10);
 
+    audio_CX2081x audio_CX2081x(*m_fx2);
+    audio_CX2081x.init();
+
     LOG(Logger::NOTICE) << "Composite video input initialized." << flush;
 
     m_video_initialized = HAPI_VIDEO_CAPTURE_SOURCE_CVBS;
