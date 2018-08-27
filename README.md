@@ -61,7 +61,7 @@ the GROUP specified.
 
 You can get the optional arguments with
 ```
-/opt/Hauppauge/bin/hauppauge2 --help
+/usr/sbin/hauppauge2 --help
 ```
 A lot of the options don't work unless just the right combination is
 selected.  The program does not currently protect you from choosing bad
@@ -90,7 +90,7 @@ require another patch against the Hauppauge code tree.
 
 #### List detected devices
 ```
-$ /opt/Hauppauge/bin/hauppauge2 --list
+$ /usr/sbin/hauppauge2 --list
 [Bus: 5 Port: 1]  2040:0xe585 E585-00-00AF4321 Colossus 2
 Number of possible configurations: 1  Device Class: 0  VendorID: 8256  ProductID: 58757
 Manufacturer: Hauppauge
@@ -106,11 +106,11 @@ Interfaces: 1 ||| Number of alternate settings: 1 | Interface Number: 0 | Number
 ```
 #### Capture from HDMI video and S/PDIF audio with AC-3 codec
 ```
-/opt/Hauppauge/bin/hauppauge2 -s E585-00-00AF4321 -a 1 -d 2 -o /tmp/test.ts
+/usr/sbin/hauppauge2 -s E585-00-00AF4321 -a 1 -d 2 -o /tmp/test.ts
 ```
 #### Capture from Component video and RCA AAC audio
 ```
-/opt/Hauppauge/bin/hauppauge2 -s E505-00-00AF1234  -i 1 -a 1 -o /tmp/test.ts
+/usr/sbin/hauppauge2 -s E505-00-00AF1234  -i 1 -a 1 -o /tmp/test.ts
 ```
 #### Use a configuration file
 The configuration file is just a list of option=value statements which
@@ -119,7 +119,7 @@ which you can copy and modify.
 ```
 cp sample.conf Colossus1.conf
 nano Colossus1.conf
-/opt/Hauppauge/bin/hauppauge2 -c Colossus1.conf
+/usr/sbin/hauppauge2 -c Colossus1.conf
 ```
 
 ----
@@ -128,14 +128,14 @@ nano Colossus1.conf
 #### Configuration file
 First step is to create an appropriate configuration file
 ```
-cd /opt/Hauppauge/etc
+cd /etc/Hauppauge
 cp sample.conf hdpvr2-1.conf
 nano hdpvr2-1.conf
 ```
 At the minimum, you need to set the serial to the correct value for your
 device.  You can use the list option to see what devices are detected:
 ```
-/opt/Hauppauge/bin/hauppauge2 --list
+/usr/sbin/hauppauge2 --list
 ```
 
 #### Configure MythTV
@@ -152,7 +152,7 @@ mythtv-setup
 3. For the "file path", use the full path of the hauppauge2 app and
 give it the location of your configuration file.  Something like:
 ```
-/opt/Hauppauge/bin/hauppauge2 -c /opt/Hauppauge/etc/hdpvr2-1.conf
+/usr/sbin/hauppauge2 -c /etc/Hauppauge/hdpvr2-1.conf
 ```
 4. Set the "Tuning timeout" to at least 15000. The HD-PVR2 / Colossus2 can take over 5 seconds just to get ready to record.  Combine that with the time it takes your STB (Set Top Box) to change channels, and produce a 'steady' output, and it can easily take 15 seconds to "tune" a channel.
 

@@ -71,6 +71,6 @@ clean:
 	$(RM) *.o *.a ${REC_EXE} ${TRANSIENT}
 
 install:
-	install -D --target-directory /opt/Hauppauge/bin ${REC_EXE}
-	install -D --target-directory /opt/Hauppauge/firmware ${FIRMWARE}
-	install -D --target-directory /opt/Hauppauge/etc ${CONF}
+	install -D --target-directory /usr/sbin ${REC_EXE}
+	install -D --target-directory /lib/firmware/Hauppauge ${FIRMWARE}
+	install -D --target-directory /etc/Hauppauge ${CONF}
