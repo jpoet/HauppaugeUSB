@@ -59,6 +59,7 @@ Logger::Logger(void)
     , m_stream_buf(this)
 {
     m_log_start = steady_clock::now();
+    m_pid = getpid();
 }
 
 Logger* Logger::Get(void)
@@ -78,7 +79,6 @@ void Logger::setAppName(const string& aname)
     boost::lock_guard<boost::mutex> lock(m_mutex);
 
     m_app_name = aname;
-    m_pid = getpid();
 }
 
 void Logger::suppressLoc(bool suppress)
@@ -269,7 +269,7 @@ void Logger::Output(std::chrono::system_clock::time_point& now,
         console << setw(3) << hh.count() << ':' << setw(2) << mm.count()
                 << ':' << setw(2) << ss.count() << '.' << setw(6) << ff.count();
 
-        cerr << console.str() << ' ' << level_code << ' ' << os.str() << endl;
+        cerr << console.str() << ' ' << level_code << setw(6) << m_pid << ' ' << os.str() << endl;
     }
 }
 
