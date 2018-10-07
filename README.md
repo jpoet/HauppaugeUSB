@@ -19,7 +19,7 @@ sudo dnf install make gcc gcc-c++ kernel-devel libstdc++-devel boost-devel libus
 
 #### Ubuntu
 ```
-sudo apt-get install libboost-log-dev libboost-programs-options-dev libusb-1.0-0-dev build-essential
+sudo apt-get install libboost-log-dev libboost-program-options-dev libusb-1.0-0-dev build-essential
 ```
 
 #### MythTV
