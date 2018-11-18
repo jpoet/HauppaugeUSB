@@ -282,3 +282,4 @@ A user on the MythTV forum has posted a detailed review of possible issues:
 
 https://forum.mythtv.org/viewtopic.php?f=2&t=2417&sid=91dea4e835b50e7564e37eda049773dd
 
+At least some of these issues are dependent on the STB used.
