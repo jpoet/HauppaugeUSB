@@ -27,6 +27,7 @@
 #include "audio_CS8416.h"
 
 #include "HauppaugeDev.h"
+#include "FlipHDMIFields.h"
 #include "Logger.h"
 
 using namespace std;
@@ -206,6 +207,9 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         LOG(Logger::CRIT) << "Cannot set video mode" << flush;
         return false;
     }
+
+    if (interlaced)
+      FlipHDMIFields();
 
     return true;
 }
@@ -424,6 +428,7 @@ bool HauppaugeDev::init_hdmi(void)
             default:
               m_rxDev->setOutputBusMode(RXOBM_422_10x2);
         }
+
     }
 
 #if 0

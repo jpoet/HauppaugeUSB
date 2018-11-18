@@ -57,7 +57,7 @@ for fl in 01-NewLine.patch \
           06-AVOutputCallback.patch \
           07-ThreadName.patch
 do
-        patch -p1 < ~/src/Hauppauge/HauppaugeUSB/Patches/"${fl}"
+	patch -p1 < ~/src/Hauppauge/HauppaugeUSB/Patches/"${fl}"
 done
 ```
 

@@ -39,8 +39,8 @@ REC_LDFLAGS =
 REC_LDFLAGS  += `pkg-config --libs libusb-1.0` \
 	        -lpthread
 
-REC_SOURCES = Logger.cpp Common.cpp MythTV.cpp HauppaugeDev.cpp hauppauge2.cpp
-REC_HEADERS = Logger.h Common.h MythTV.h HauppaugeDev.h
+REC_SOURCES = Logger.cpp Common.cpp MythTV.cpp FlipHDMIFields.cpp HauppaugeDev.cpp hauppauge2.cpp
+REC_HEADERS = Logger.h Common.h MythTV.h FlipHDMIFields.h HauppaugeDev.h
 REC_OBJECTS = $(REC_SOURCES:.cpp=.o)
 
 CONF = etc/sample.conf
