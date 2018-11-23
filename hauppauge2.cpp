@@ -223,6 +223,8 @@ int main(int argc, char *argv[])
         ("output,o", po::value<string>(), "Output destination")
         ("mythtv", po::value<bool>()->implicit_value(true),
          "Operate in MythTV External Recorder mode")
+        ("inputid", po::value<int>()->implicit_value(0),
+         "Input Id (informational, set by MythTV)")
         ("duration", po::value<int>()->default_value(0),
          "Stop recording after duration")
 
