@@ -26,7 +26,7 @@
 using namespace std;
 using namespace boost::algorithm;
 
-const string VERSION = "0.1";
+const string VERSION = "0.2";
 
 MythTV::MythTV(const Parameters & params)
     : m_buffer_max(188 * 100000),
