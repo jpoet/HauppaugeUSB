@@ -247,7 +247,9 @@ int main(int argc, char *argv[])
         ("override-loglevel", po::value<string>()->default_value("notice"),
          "Overrides the command-line logging level.  All log messages at lower "
          "levels will be discarded. In descending order: emerg, alert, crit, "
-         "err, warning, notice, info, debug");
+         "err, warning, notice, info, debug")
+        ("description", po::value<string>(),
+         "Set the description used in the MythTV log files.");
 
     Logger::setThreadName("main");
 
@@ -315,6 +317,7 @@ int main(int argc, char *argv[])
         Logger::Get()->setFilter(vm["override-loglevel"].as<string>());
     else if (vm.count("loglevel"))
         Logger::Get()->setFilter(vm["loglevel"].as<string>());
+
 
     if (vm.count("logpath") && vm.count("quiet") < 2)
     {
@@ -393,7 +396,9 @@ int main(int argc, char *argv[])
     {
         if (params.mythtv)
         {
-            MythTV mythtv(params);
+            string desc = vm.count("description") ?
+                          vm["description"].as<string>() : params.serial;
+            MythTV mythtv(params, desc);
             mythtv.Wait();
         }
         else

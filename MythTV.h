@@ -81,7 +81,9 @@ class Buffer
 class Commands
 {
   public:
-    Commands(MythTV * parent) : m_thread(), m_parent(parent) {;}
+    enum { max_api_version = 2 };
+
+    Commands(MythTV * parent);
     ~Commands(void) {
         m_run = false;
         if(m_thread.joinable()) m_thread.join();
@@ -94,7 +96,8 @@ class Commands
             m_thread.join();
     }
 
-    bool send_status(const std::string & cmd, const std::string & status);
+    bool send_status(const std::string & cmd, const std::string & serial,
+                     const std::string & status);
     bool process_command(const std::string & cmd);
 
   protected:
@@ -105,6 +108,7 @@ class Commands
     std::atomic_bool m_run;
 
     MythTV* m_parent;
+    int     m_api_version;
 };
 
 class MythTV
@@ -113,7 +117,7 @@ class MythTV
     friend class Commands;
 
   public:
-    MythTV(const Parameters & params);
+    MythTV(const Parameters & params, const std::string & desc);
     ~MythTV(void);
 
     void Terminate(void);
@@ -130,6 +134,8 @@ class MythTV
     bool StopEncoding(bool soft = false);
 
   protected:
+    std::string  m_desc;
+
     uint32_t     m_buffer_max;
     uint32_t     m_block_size;
 

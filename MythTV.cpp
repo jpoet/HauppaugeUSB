@@ -22,24 +22,26 @@
 #include <unistd.h>
 #include <poll.h>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
 
 using namespace std;
 using namespace boost::algorithm;
 
 const string VERSION = "0.2";
 
-MythTV::MythTV(const Parameters & params)
-    : m_buffer_max(188 * 100000),
-      m_block_size(m_buffer_max / 4),
-      m_buffer(this),
-      m_commands(this),
-      m_params(params),
-      m_dev(nullptr),
-      m_run(true),
-      m_fatal(false),
-      m_streaming(false),
-      m_xon(false),
-      m_ready(false)
+MythTV::MythTV(const Parameters & params, const string & desc)
+    : m_desc(desc)
+    , m_buffer_max(188 * 100000)
+    , m_block_size(m_buffer_max / 4)
+    , m_buffer(this)
+    , m_commands(this)
+    , m_params(params)
+    , m_dev(nullptr)
+    , m_run(true)
+    , m_fatal(false)
+    , m_streaming(false)
+    , m_xon(false)
+    , m_ready(false)
 {
     m_buffer.Start();
     m_commands.Start();
@@ -202,20 +204,34 @@ bool MythTV::StopEncoding(bool soft)
     return false;
 }
 
-bool Commands::send_status(const string & command, const string & status)
+Commands::Commands(MythTV * parent)
+    : m_thread()
+    , m_parent(parent)
+    , m_api_version(1)
 {
-    int len = write(2, status.data(), status.size());
-    write(2, "\n", 1);
+}
 
-    if (len != static_cast<int>(status.size()))
+bool Commands::send_status(const string & command, const string & serial,
+                           const string & status)
+{
+    string buf;
+    if (m_api_version > 1)
+        buf = serial + ":" + status + "\n";
+    else
+        buf = status + "\n";
+
+    int len = write(2, buf.data(), buf.size());
+
+    if (len != static_cast<int>(buf.size()))
     {
         LOG(Logger::ERR) << "Status -- Wrote " << len
-                         << " of " << status.size()
+                         << " of " << buf.size()
                          << " bytes of status '" << status << "'" << flush;
         return false;
     }
     else
-        LOG(Logger::NOTICE) << command << ": '" << status << "'" << flush;
+        LOG(Logger::NOTICE) << command << ": '"
+                            << serial << ":" << status << "'" << flush;
 
     return true;
 }
@@ -224,115 +240,174 @@ bool Commands::process_command(const string & cmd)
 {
     LOG(Logger::DEBUG) << "Processing '" << cmd << "'" << flush;
 
-    if (starts_with(cmd, "Version?"))
+    if (starts_with(cmd, "APIVersion?"))
     {
         std::unique_lock<std::mutex> lk(m_parent->m_run_mutex);
         if (m_parent->m_fatal)
-            send_status(cmd, "ERR:" + m_parent->m_fatal_msg);
+            send_status(cmd, "", "ERR:" + m_parent->m_fatal_msg);
         else
-            send_status(cmd, "OK:" + VERSION);
+        {
+            send_status(cmd, "", "OK:" + std::to_string(max_api_version));
+            m_api_version = max_api_version;
+        }
         return true;
     }
-    if (starts_with(cmd, "HasLock?"))
+
+    string         serial;
+    deque<string>  tokens;
+    boost::split(tokens, cmd, boost::is_any_of(":"));
+    if (m_api_version > 1)
+    {
+        if (tokens.size() < 2)
+        {
+            send_status(cmd, "-1", "ERR:Malformed message. Expecting "
+                        "<serial>:command<:optional data>, but received \"" +
+                        cmd + "\"");
+            return true;
+        }
+        serial = tokens[0];
+        tokens.pop_front();
+    }
+
+    if (starts_with(tokens[0], "Version?"))
+    {
+        std::unique_lock<std::mutex> lk(m_parent->m_run_mutex);
+        if (m_parent->m_fatal)
+            send_status(cmd, serial, "ERR:" + m_parent->m_fatal_msg);
+        else
+            send_status(cmd, serial, "OK:" + VERSION);
+        return true;
+    }
+    if (starts_with(tokens[0], "Description?"))
+    {
+        send_status(cmd, serial, "OK:" + m_parent->m_desc);
+        return true;
+    }
+    if (starts_with(tokens[0], "HasLock?"))
     {
         if (m_parent->m_ready)
-            send_status(cmd, "OK:Yes");
+            send_status(cmd, serial, "OK:Yes");
         else
-            send_status(cmd, "OK:No");
+            send_status(cmd, serial, "OK:No");
         return true;
     }
-    if (starts_with(cmd, "SignalStrengthPercent"))
+    if (starts_with(tokens[0], "SignalStrengthPercent"))
     {
         if (m_parent->m_ready)
-            send_status(cmd, "OK:100");
+            send_status(cmd, serial, "OK:100");
         else
-            send_status(cmd, "OK:20");
+            send_status(cmd, serial, "OK:20");
         return true;
     }
-    if (starts_with(cmd, "LockTimeout"))
+    if (starts_with(tokens[0], "LockTimeout"))
     {
-        send_status(cmd, "OK:12000");
+        send_status(cmd, serial, "OK:12000");
         m_parent->OpenDev();
         return true;
     }
-    if (starts_with(cmd, "HasTuner?"))
+    if (starts_with(tokens[0], "HasTuner?"))
     {
-        send_status(cmd, "OK:No");
+        send_status(cmd, serial, "OK:No");
         return true;
     }
-    if (starts_with(cmd, "HasPictureAttributes?"))
+    if (starts_with(tokens[0], "HasPictureAttributes?"))
     {
-        send_status(cmd, "OK:No");
+        send_status(cmd, serial, "OK:No");
         return true;
     }
-    if (starts_with(cmd, "SendBytes"))
+    if (starts_with(tokens[0], "SendBytes"))
     {
         // Used when FlowControl is Polling
-        send_status(cmd, "ERR:Not supported");
+        send_status(cmd, serial, "ERR:Not supported");
+        return true;
     }
-    else if (starts_with(cmd, "XON"))
+    if (starts_with(tokens[0], "XON"))
     {
         // Used when FlowControl is XON/XOFF
-        send_status(cmd, "OK");
+        send_status(cmd, serial, "OK");
         m_parent->m_xon = true;
         m_parent->m_flow_cond.notify_all();
+        return true;
     }
-    else if (starts_with(cmd, "XOFF"))
+    if (starts_with(tokens[0], "XOFF"))
     {
-        send_status(cmd, "OK");
+        send_status(cmd, serial, "OK");
         // Used when FlowControl is XON/XOFF
         m_parent->m_xon = false;
         m_parent->m_flow_cond.notify_all();
+        return true;
     }
-    else if (starts_with(cmd, "TuneChannel"))
-    {
-        // Used if we announce that we have a 'tuner'
-        send_status(cmd, "ERR:Not supported");
-    }
-    else if (starts_with(cmd, "IsOpen?"))
+    if (starts_with(tokens[0], "IsOpen?"))
     {
         std::unique_lock<std::mutex> lk(m_parent->m_run_mutex);
         if (m_parent->m_fatal)
-            send_status(cmd, "ERR:" + m_parent->m_fatal_msg);
+            send_status(cmd, serial, "ERR:" + m_parent->m_fatal_msg);
         else if (m_parent->m_ready)
-            send_status(cmd, "OK:Open");
+            send_status(cmd, serial, "OK:Open");
         else
-            send_status(cmd, "WARN:Not Open yet");
+            send_status(cmd, serial, "WARN:Not Open yet");
+        return true;
     }
-    else if (starts_with(cmd, "CloseRecorder"))
+    if (starts_with(tokens[0], "CloseRecorder"))
     {
-        send_status(cmd, "OK:Terminating");
+        send_status(cmd, serial, "OK:Terminating");
         m_parent->Terminate();
         return true;
     }
-    else if (starts_with(cmd, "FlowControl?"))
+    if (starts_with(tokens[0], "FlowControl?"))
     {
-        send_status(cmd, "OK:XON/XOFF");
+        send_status(cmd, serial, "OK:XON/XOFF");
+        return true;
     }
-    else if (starts_with(cmd, "BlockSize"))
-    {
-        m_parent->BlockSize(stoul(cmd.substr(10)));
-        send_status(cmd, "OK");
-    }
-    else if (starts_with(cmd, "StartStreaming"))
+    if (starts_with(tokens[0], "StartStreaming"))
     {
         if (m_parent->StartEncoding())
-            send_status(cmd, "OK:Started");
+            send_status(cmd, serial, "OK:Started");
         else
-            send_status(cmd, "ERR:Failed to start encoding.");
+            send_status(cmd, serial, "ERR:Failed to start encoding.");
+        return true;
     }
-    else if (starts_with(cmd, "StopStreaming"))
+    if (starts_with(tokens[0], "StopStreaming"))
     {
         /* This does not close the stream!  When Myth is done with
          * this 'recording' ExternalChannel::EnterPowerSavingMode()
          * will be called, which invokes CloseRecorder() */
         if (m_parent->StopEncoding())
-            send_status(cmd, "OK:Stopped");
+            send_status(cmd, serial, "OK:Stopped");
         else
-            send_status(cmd, "ERR:Failed to start encoding.");
+            send_status(cmd, serial, "ERR:Failed to start encoding.");
+        return true;
+    }
+
+    // The following commands must have <data>
+    if (tokens.size() < 2)
+    {
+        send_status(cmd, serial, "ERR:Malformed message. Expecting "
+                    "<serial>:command:<data>, but received \"" +
+                    cmd + "\"");
+        return true;
+    }
+
+    if (starts_with(tokens[0], "APIVersion"))
+    {
+        std::unique_lock<std::mutex> lk(m_parent->m_run_mutex);
+        m_api_version = stoul(tokens[1]);
+        send_status(cmd, serial, "OK:API Version " +
+                    std::to_string(m_api_version));
+    }
+    else if (starts_with(tokens[0], "TuneChannel"))
+    {
+        // Used if we announce that we have a 'tuner'
+        send_status(cmd, serial, "ERR:Not supported");
+    }
+    else if (starts_with(tokens[0], "BlockSize"))
+    {
+        m_parent->BlockSize(stoul(tokens[1]));
+        send_status(cmd, serial, "OK");
     }
     else
-        send_status(cmd, "ERR:Unrecognized command");
+        send_status(cmd, serial, "ERR:Unrecognized command: '" +
+                    tokens[0] + "'");
 
     return true;
 }

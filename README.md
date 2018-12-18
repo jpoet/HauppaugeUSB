@@ -283,3 +283,5 @@ A user on the MythTV forum has posted a detailed review of possible issues:
 https://forum.mythtv.org/viewtopic.php?f=2&t=2417&sid=91dea4e835b50e7564e37eda049773dd
 
 At least some of these issues are dependent on the STB used.
+As of commit f7df8a2bb42d1fe8f9e5a52eb54bf1cd4cf9cd51, the issue with HDMI interlaced fields being in the wrong order has been fixed.
+
