@@ -208,9 +208,6 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         return false;
     }
 
-    if (interlaced)
-      FlipHDMIFields();
-
     return true;
 }
 
@@ -410,6 +407,9 @@ bool HauppaugeDev::init_hdmi(void)
                               vp.interlaced, vp.vFreq,
                               16.0f/9, ap.sampleRate))
             return false;
+
+        if (vp.interlaced)
+            FlipHDMIFields();
 
         // there should not be any such modes in DMT... Or maybe
         // bad InfoFrame?
