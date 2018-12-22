@@ -29,7 +29,7 @@
 #include "audio_CS8416.h"
 
 #include "HauppaugeDev.h"
-#include "FlipHDMIFields.h"
+#include "FlipInterlacedFields.h"
 #include "Logger.h"
 
 using namespace std;
@@ -210,6 +210,9 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
     LOG(Logger::NOTICE) << "Audio codec: "
                         << (audioFormat == ENCAIF_AC3 ? "AC3" : "AUTO")
                         << flush;
+
+    if (interlaced)
+        FlipHDMIFields();
 
     if(!m_encDev->setInputFormat(source, audioFormat,
                                  width, height, interlaced,
@@ -419,9 +422,6 @@ bool HauppaugeDev::init_hdmi(void)
                               16.0f/9, ap.sampleRate))
             return false;
 
-        if (vp.interlaced)
-            FlipHDMIFields();
-
         // there should not be any such modes in DMT... Or maybe
         // bad InfoFrame?
         m_rxDev->setOutputBusMode(RXOBM_422_10x2);
@@ -503,9 +503,11 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio, bool ac3,
     for ( ; !m_fx2->isUSBHighSpeed() && idx < MAX_RETRY; ++idx)
     {
         m_fx2->stopCPU();
-        m_fx2->loadFirmware();
-        m_fx2->startCPU();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        m_fx2->loadFirmware();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        m_fx2->startCPU();
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     LOG(Logger::NOTICE) << "FX2 ready after " << idx << " tries." << flush;
@@ -527,7 +529,7 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio, bool ac3,
                        << "\nPORT_E: 0x" << m_fx2->getPortState(FX2_PORT_E)
                        << dec
                        << flush;
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     LOG(Logger::NOTICE) << "encDev ready" << flush;
 
     m_rxDev = new receiver_ADV7842_t(*m_fx2);
@@ -537,10 +539,12 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio, bool ac3,
         m_rxDev->setEDID(edidHDPVR2_1080p6050_ac3_fix_rgb,
                          sizeof(edidHDPVR2_1080p6050_ac3_fix_rgb),
                          edidHDPVR2_1080p6050_ac3_fix_rgbSpaLoc);
+        LOG(Logger::NOTICE) << "Using 1080p6050 w/AC3 EDID." << flush;
 #else
         m_rxDev->setEDID(edidHDPVR2_1080p6050_atmos,
                          sizeof(edidHDPVR2_1080p6050_ac3_fix_rgb),
                          edidHDPVR2_1080p6050_atmos_SPAloc);
+        LOG(Logger::NOTICE) << "Using 1080p6050 w/Atmos EDID." << flush;
 #endif
     }
     else
@@ -548,11 +552,13 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio, bool ac3,
 #if 0
         // Original EDID
         m_rxDev->setEDID(EDID_default, sizeof(EDID_default), EDID_default_SPAloc);
+        LOG(Logger::NOTICE) << "Using 1080p6050 stereo EDID." << flush;
 #else
         // Updated EDID from Hauppauge
         m_rxDev->setEDID(edidHDPVR2_1080p6050_pcm_fix_rgb,
                          sizeof(edidHDPVR2_1080p6050_pcm_fix_rgb),
                          edidHDPVR2_1080p6050_pcm_fix_rgbSpaLoc);
+        LOG(Logger::NOTICE) << "Using 1080p6050 stereo RGB EDID." << flush;
 #endif
     }
     m_rxDev->init();

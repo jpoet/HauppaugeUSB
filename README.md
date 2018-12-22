@@ -10,7 +10,7 @@ This can be used at the command-line as well as an "External Recorder" for MythT
 
 ----
 ## News
-The issue with HDMI interlaced fields being in the wrong order has been fixed.
+The issue with interlaced fields being in the wrong order has been fixed.
 
 AC3 audio codec now works via HDMI.
 
@@ -113,10 +113,6 @@ A lot of the options don't work unless just the right combination is
 selected.  The program does not currently protect you from choosing bad
 combinations, because in many cases they *should* work, but have not been
 implemented yet.
-
-For example, `-i 1 -a 1 -d 2` does not currently get you AC3 via S/PDIF with the
-component video.  I think I know how to get that working, but it will
-require another patch against the Hauppauge code tree.
 
 ----
 ### Command line examples
