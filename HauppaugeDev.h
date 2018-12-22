@@ -36,7 +36,8 @@ class HauppaugeDev
     HauppaugeDev(const Parameters & params);
     ~HauppaugeDev(void);
 
-    bool Open(USBWrapper_t & usbio, DataTransfer::callback_t * cb = nullptr);
+    bool Open(USBWrapper_t & usbio, bool ac3,
+              DataTransfer::callback_t * cb = nullptr);
     void Close(void);
 
     bool StartEncoding(void);

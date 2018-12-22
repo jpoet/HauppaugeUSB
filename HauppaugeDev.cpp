@@ -24,6 +24,7 @@
 #include "registryif.h"
 #include "audio_CX2081x.h"
 #include "device_EDID.h"
+#include "hauppauge2_EDID.h"
 //Common/Rx/audio_CS8416.h
 #include "audio_CS8416.h"
 
@@ -484,7 +485,7 @@ void HauppaugeDev::log_ports(void)
                       << dec << flush;
 }
 
-bool HauppaugeDev::Open(USBWrapper_t & usbio,
+bool HauppaugeDev::Open(USBWrapper_t & usbio, bool ac3,
                         DataTransfer::callback_t * cb)
 {
     LOG(Logger::NOTICE) << "Opening Hauppauge USB device." << flush;
@@ -530,7 +531,30 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio,
     LOG(Logger::NOTICE) << "encDev ready" << flush;
 
     m_rxDev = new receiver_ADV7842_t(*m_fx2);
-    m_rxDev->setEDID(EDID_default, sizeof(EDID_default), EDID_default_SPAloc);
+    if (ac3)
+    {
+#if 1
+        m_rxDev->setEDID(edidHDPVR2_1080p6050_ac3_fix_rgb,
+                         sizeof(edidHDPVR2_1080p6050_ac3_fix_rgb),
+                         edidHDPVR2_1080p6050_ac3_fix_rgbSpaLoc);
+#else
+        m_rxDev->setEDID(edidHDPVR2_1080p6050_atmos,
+                         sizeof(edidHDPVR2_1080p6050_ac3_fix_rgb),
+                         edidHDPVR2_1080p6050_atmos_SPAloc);
+#endif
+    }
+    else
+    {
+#if 0
+        // Original EDID
+        m_rxDev->setEDID(EDID_default, sizeof(EDID_default), EDID_default_SPAloc);
+#else
+        // Updated EDID from Hauppauge
+        m_rxDev->setEDID(edidHDPVR2_1080p6050_pcm_fix_rgb,
+                         sizeof(edidHDPVR2_1080p6050_pcm_fix_rgb),
+                         edidHDPVR2_1080p6050_pcm_fix_rgbSpaLoc);
+#endif
+    }
     m_rxDev->init();
     LOG(Logger::NOTICE) << "rxDev ready" << flush;
 

@@ -9,6 +9,12 @@ being said, It is working for me.
 This can be used at the command-line as well as an "External Recorder" for MythTV.
 
 ----
+## News
+The issue with HDMI interlaced fields being in the wrong order has been fixed.
+
+AC3 audio codec now works via HDMI.
+
+----
 ## Installing
 
 ### Install dependancies
@@ -108,20 +114,7 @@ selected.  The program does not currently protect you from choosing bad
 combinations, because in many cases they *should* work, but have not been
 implemented yet.
 
-For example, selecting `-i 3 -a 3 -d 2` does not currently get you AC3 audio
-with your HDMI video.  When I asked Hauppauge about this, they said:
->There are basically 3 audio paths to consider:
- > 1) I2S PCM audio from HDMI
- > 2) I2S PCM Audio from CX28010 (L/R Stereo baseband audio in)
- > 3) I2S “S/PDIF” Digital Audio via the CS8416 (could be from either external S/PDIF connector, or from 7842 HDMI based on 8416 source settings)
- >
-> All AC-3 Audio happens via Path 3; you need to set the proper input on the CS8416, but the I2S bus (selected via “Port E”) would be the same as for the S/PDIF connector.
-> 
-> NOTE: You also need to update the EDID to actually claim it supports AC-3 on the HDMI port; if you look at the unit running under Windows you will see the EDID change if AC-3 is set to be allowed in our apps.
-> 
-> Also, even if you allow it, there’s no promise that the HDMI source will  use it (it may not even be AC-3 capable), so you would have to detect in the code if AC-3 is actually present and switch from the normal PCM audio path(case #1) from 7842 to the AC-3 audio path via 8416 (case #3).  This can change dynamically with content depending on the HDMI source device; so you probably have to poll for any changes.
-
-Also, `-i 1 -a 1 -d 2` does not currently get you AC3 via S/PDIF with your
+For example, `-i 1 -a 1 -d 2` does not currently get you AC3 via S/PDIF with the
 component video.  I think I know how to get that working, but it will
 require another patch against the Hauppauge code tree.
 
@@ -283,5 +276,3 @@ A user on the MythTV forum has posted a detailed review of possible issues:
 https://forum.mythtv.org/viewtopic.php?f=2&t=2417&sid=91dea4e835b50e7564e37eda049773dd
 
 At least some of these issues are dependent on the STB used.
-As of commit f7df8a2bb42d1fe8f9e5a52eb54bf1cd4cf9cd51, the issue with HDMI interlaced fields being in the wrong order has been fixed.
-

@@ -121,7 +121,8 @@ void MythTV::OpenDev(void)
         return;
     }
 
-    if (!m_dev->Open(m_usbio, &getWriteCallBack()))
+    if (!m_dev->Open(m_usbio, (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3),
+                     &getWriteCallBack()))
     {
         Fatal(m_dev->ErrorString());
         delete m_dev;

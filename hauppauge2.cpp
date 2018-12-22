@@ -413,7 +413,7 @@ int main(int argc, char *argv[])
             if (!usbio.Open(params.serial))
                 return -3;
 
-            if (!dev.Open(usbio))
+            if (!dev.Open(usbio, (params.audioCodec == HAPI_AUDIO_CODEC_AC3)))
             {
                 usbio.Close();
                 return -4;
