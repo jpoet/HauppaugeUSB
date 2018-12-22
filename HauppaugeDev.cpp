@@ -19,6 +19,7 @@
  */
 
 #include <unistd.h>
+#include <thread>
 
 #include "registryif.h"
 #include "audio_CX2081x.h"
@@ -33,14 +34,13 @@
 using namespace std;
 
 HauppaugeDev::HauppaugeDev(const Parameters & params)
-    : m_fd(-1),
-      m_rxDev(nullptr),
-      m_encDev(nullptr),
-      m_fx2(nullptr),
-      m_params(params),
-      m_video_initialized(-1),
-      m_err(false),
-      m_max_retry(30)
+    : m_fd(-1)
+    , m_rxDev(nullptr)
+    , m_encDev(nullptr)
+    , m_fx2(nullptr)
+    , m_params(params)
+    , m_video_initialized(-1)
+    , m_err(false)
 {
     configure();
 }
@@ -105,6 +105,7 @@ void HauppaugeDev::configure(void)
     RegistryAccess::writeDword("VideoLevel", m_params.videoH264Level);
 
     RegistryAccess::writeDword("AudioCapSource", m_params.audioInput);
+//    RegistryAccess::writeDword("AudioCapSPDIFInput", 3); // Default = 0
 
     RegistryAccess::writeDword("AudioCodecOutputFormat", m_params.audioCodec);
 //    RegistryAccess::writeDword("AudioCapMode", 5);
@@ -114,8 +115,7 @@ void HauppaugeDev::configure(void)
     RegistryAccess::writeDword("AudioCapSampleRate", m_params.audioSamplerate);
     RegistryAccess::writeDword("AudioOutputBitrate", m_params.audioBitrate);
 
-    // AudioCapSPDIFInput
-    // AudioCodecOutputFormat
+
     // AudioOutputMode
     // -
 }
@@ -144,10 +144,10 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         // check that CS8416 part is installed and supported by this device
         try
         {
-            audio_CS8416.reset(audio_CS8416::AudioInput::OPTICAL);
-
             // init CS8416 optical receiver if detected
             // switch audio mux to SPDIF
+            audio_CS8416.reset(audio_CS8416::AudioInput::OPTICAL);
+
             m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
             LOG(Logger::NOTICE) << "Audio Input set to S/PDIF" << flush;
         }
@@ -166,11 +166,21 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         {
             case HAPI_AUDIO_CAPTURE_SOURCE_HDMI:
             {
-                audio_CS8416.reset(audio_CS8416::AudioInput::HDMI);
                 if (audioFormat == ENCAIF_AC3)
+                {
                     m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
+                    LOG(Logger::NOTICE) << "'SPDIF' from HDMI via 8416" << flush;
+                }
                 else
+                {
+#if 0               // Fred says this is wrong
                     m_fx2->setPortStateBits(FX2_PORT_E, 0, 0x18);
+#else
+                    m_fx2->setPortStateBits(FX2_PORT_E, 0x00, 0x00);
+#endif
+                    LOG(Logger::NOTICE) << "I2S audio from ADV7842" << flush;
+                }
+                audio_CS8416.reset(audio_CS8416::AudioInput::HDMI);
                 LOG(Logger::NOTICE) << "Audio Input: HDMI" << flush;
                 break;
             }
@@ -227,19 +237,19 @@ bool HauppaugeDev::init_cvbs(void)
     if (m_video_initialized != HAPI_VIDEO_CAPTURE_SOURCE_CVBS)
     {
         m_rxDev->setInput(RXI_CVBS);
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         m_rxDev->showInfo();
         m_encDev->showInfo();
     }
 
     int idx;
-    for (idx = 0; idx < m_max_retry; ++idx)
+    for (idx = 0; idx < MAX_RETRY; ++idx)
     {
         if (m_rxDev->hasInputSignal())
             break;
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    if (idx == m_max_retry)
+    if (idx == MAX_RETRY)
     {
         m_errmsg = "No input signal.";
         LOG(Logger::CRIT) << m_errmsg << flush;
@@ -247,16 +257,16 @@ bool HauppaugeDev::init_cvbs(void)
     }
 
     receiverOutputParams_t vp;
-    for (idx = 0; idx < m_max_retry; ++idx)
+    for (idx = 0; idx < MAX_RETRY; ++idx)
     {
         // getOutputParams can return garbage
         if (m_rxDev->getOutputParams(&vp) &&
             valid_resolution(vp.width, vp.height))
             break;
         LOG(Logger::NOTICE) << "Invalid Output Params, retrying." << flush;
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    if (idx == m_max_retry)
+    if (idx == MAX_RETRY)
     {
         m_errmsg = "Cannot determine video mode.";
         LOG(Logger::CRIT) << m_errmsg << flush;
@@ -287,19 +297,19 @@ bool HauppaugeDev::init_component(void)
     if (m_video_initialized != HAPI_VIDEO_CAPTURE_SOURCE_COMPONENT)
     {
         m_rxDev->setInput(RXI_COMP);
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         m_rxDev->showInfo();
         m_encDev->showInfo();
     }
 
     int idx;
-    for (idx = 0; idx < m_max_retry; ++idx)
+    for (idx = 0; idx < MAX_RETRY; ++idx)
     {
         if (m_rxDev->hasInputSignal())
             break;
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    if (idx == m_max_retry)
+    if (idx == MAX_RETRY)
     {
         m_errmsg = "No input signal.";
         LOG(Logger::CRIT) << m_errmsg << flush;
@@ -307,16 +317,16 @@ bool HauppaugeDev::init_component(void)
     }
 
     receiverOutputParams_t vp;
-    for (idx = 0; idx < m_max_retry; ++idx)
+    for (idx = 0; idx < MAX_RETRY; ++idx)
     {
         // getOutputParams can return garbage
         if (m_rxDev->getOutputParams(&vp) &&
             valid_resolution(vp.width, vp.height))
             break;
         LOG(Logger::NOTICE) << "Invalid Output Params, retrying." << flush;
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    if (idx == m_max_retry)
+    if (idx == MAX_RETRY)
     {
         m_errmsg = "Cannot determine video mode.";
         LOG(Logger::CRIT) << m_errmsg << flush;
@@ -360,19 +370,19 @@ bool HauppaugeDev::init_hdmi(void)
     if (m_video_initialized != HAPI_VIDEO_CAPTURE_SOURCE_HDMI)
     {
         m_rxDev->setInput(RXI_HDMI);
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         m_rxDev->showInfo();
         m_encDev->showInfo();
     }
 
     int idx;
-    for (idx = 0; idx < m_max_retry; ++idx)
+    for (idx = 0; idx < MAX_RETRY; ++idx)
     {
         if (m_rxDev->hasInputSignal())
             break;
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    if (idx == m_max_retry)
+    if (idx == MAX_RETRY)
     {
         m_errmsg = "No input signal.";
         LOG(Logger::CRIT) << m_errmsg << flush;
@@ -387,16 +397,16 @@ bool HauppaugeDev::init_hdmi(void)
     if (vic <= 0 || !m_encDev->setHDMIFormat(vic, ap.sampleRate))
     {
         receiverHDMIParams_t vp;
-        for (idx = 0; idx < m_max_retry; ++idx)
+        for (idx = 0; idx < MAX_RETRY; ++idx)
         {
             // getHDMIParams can return garbage
             if (m_rxDev->getHDMIParams(&vp) &&
                 valid_resolution(vp.width, vp.height))
                 break;
             LOG(Logger::NOTICE) << "Invalid Output Params, retrying." << flush;
-            usleep(500000);
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
-        if (idx == m_max_retry)
+        if (idx == MAX_RETRY)
         {
             m_errmsg = "Cannot determine video mode.";
             LOG(Logger::CRIT) << m_errmsg << flush;
@@ -488,15 +498,16 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio,
 
     m_fx2 = new FX2Device_t(usbio);
 
-    for (int idx = 0; !m_fx2->isUSBHighSpeed() && idx < m_max_retry; ++idx)
+    int idx =0;
+    for ( ; !m_fx2->isUSBHighSpeed() && idx < MAX_RETRY; ++idx)
     {
         m_fx2->stopCPU();
         m_fx2->loadFirmware();
         m_fx2->startCPU();
-        usleep(1000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    LOG(Logger::NOTICE) << "FX2 ready" << flush;
+    LOG(Logger::NOTICE) << "FX2 ready after " << idx << " tries." << flush;
     log_ports();
 
     // reset CS5340, it will be set back by m_encDev->init()
@@ -515,7 +526,7 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio,
                        << "\nPORT_E: 0x" << m_fx2->getPortState(FX2_PORT_E)
                        << dec
                        << flush;
-    usleep(100);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     LOG(Logger::NOTICE) << "encDev ready" << flush;
 
     m_rxDev = new receiver_ADV7842_t(*m_fx2);

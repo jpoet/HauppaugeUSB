@@ -31,6 +31,8 @@
 class HauppaugeDev
 {
   public:
+    enum constants { MAX_RETRY = 300 };
+
     HauppaugeDev(const Parameters & params);
     ~HauppaugeDev(void);
 
@@ -71,8 +73,6 @@ class HauppaugeDev
 
     std::string         m_errmsg;
     bool                m_err;
-
-    int                 m_max_retry;
 };
 
 #endif
