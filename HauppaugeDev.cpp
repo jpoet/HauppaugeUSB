@@ -169,8 +169,19 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
             {
                 if (audioFormat == ENCAIF_AC3)
                 {
-                    m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
-                    LOG(Logger::NOTICE) << "'SPDIF' from HDMI via 8416" << flush;
+                    try
+                    {
+                        m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
+                        audio_CS8416.reset(audio_CS8416::AudioInput::HDMI);
+                        LOG(Logger::NOTICE) << "'SPDIF' from HDMI via 8416"
+                                            << flush;
+                    }
+                    catch (std::runtime_error &e)
+                    {
+                        LOG(Logger::WARNING) << "Can't initialize CS8416 part. "
+                            "S/PDIF input won't be available" << flush;
+                        spdif = false;
+                    }
                 }
                 else
                 {
@@ -181,7 +192,6 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
 #endif
                     LOG(Logger::NOTICE) << "I2S audio from ADV7842" << flush;
                 }
-                audio_CS8416.reset(audio_CS8416::AudioInput::HDMI);
                 LOG(Logger::NOTICE) << "Audio Input: HDMI" << flush;
                 break;
             }
