@@ -138,8 +138,6 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3 ? ENCAIF_AC3
          : ENCAIF_AUTO);
 
-    audio_CS8416 audio_CS8416(*m_fx2);
-
     if (spdif)
     {
         // check that CS8416 part is installed and supported by this device
@@ -147,6 +145,7 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         {
             // init CS8416 optical receiver if detected
             // switch audio mux to SPDIF
+            audio_CS8416 audio_CS8416(*m_fx2);
             audio_CS8416.reset(audio_CS8416::AudioInput::OPTICAL);
 
             m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
@@ -172,6 +171,7 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
                     try
                     {
                         m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
+                        audio_CS8416 audio_CS8416(*m_fx2);
                         audio_CS8416.reset(audio_CS8416::AudioInput::HDMI);
                         LOG(Logger::NOTICE) << "'SPDIF' from HDMI via 8416"
                                             << flush;
