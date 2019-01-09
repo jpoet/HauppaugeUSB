@@ -53,19 +53,21 @@ void InitInterruptHandler(void)
     pthread_sigmask(SIG_BLOCK, &ss, NULL);
 }
 
-static int evtWait() {
-        sigset_t ss;
-        sigemptyset(&ss);
-        sigaddset(&ss, SIGINT);
-        int s;
-        if(sigwait(&ss, &s) != 0) return 0;
-        return s;
+static int evtWait()
+{
+    sigset_t ss;
+    sigemptyset(&ss);
+    sigaddset(&ss, SIGINT);
+    int s;
+    if (sigwait(&ss, &s) != 0)
+        return 0;
+    return s;
 }
 
 bool ListDevs(void)
 {
     USBWrapper_t usbio;
-    DeviceIDVec devs;
+    DeviceIDVec  devs;
     DeviceIDVec::iterator Idev;
 
     if (!usbio.DeviceList(devs))
@@ -103,7 +105,7 @@ bool ListDevs(void)
 bool FindDev(const string & serial, int & bus, int & port)
 {
     USBWrapper_t usbio;
-    DeviceIDVec devs;
+    DeviceIDVec  devs;
     DeviceIDVec::iterator Idev;
 
     if (!usbio.DeviceList(devs))
@@ -116,7 +118,7 @@ bool FindDev(const string & serial, int & bus, int & port)
     {
         if (get<2>(*Idev) == serial)
         {
-            bus = static_cast<int>(get<4>(*Idev));
+            bus  = static_cast<int>(get<4>(*Idev));
             port = static_cast<int>(get<5>(*Idev));
             return true;
         }

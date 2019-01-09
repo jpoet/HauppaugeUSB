@@ -42,6 +42,7 @@ MythTV::MythTV(const Parameters & params, const string & desc)
     , m_streaming(false)
     , m_xon(false)
     , m_ready(false)
+    , m_error_cb(std::bind(&MythTV::USBError, this))
 {
     m_buffer.Start();
     m_commands.Start();
@@ -54,16 +55,17 @@ MythTV::~MythTV(void)
     m_commands.Join();
     m_buffer.Join();
 
-    std::lock_guard<std::mutex> lock(m_flow_mutex);
+    m_flow_mutex.lock();
     delete m_dev;
     m_dev = nullptr;
+    m_flow_mutex.unlock();
 }
 
 void MythTV::Terminate(void)
 {
     LOG(Logger::CRIT) <<"Terminating." << flush;
-    StopEncoding(true);
     m_run = false;
+    StopEncoding(true);
 
     m_flow_cond.notify_all();
     m_run_cond.notify_all();
@@ -94,7 +96,7 @@ void MythTV::Wait(void)
 
 void MythTV::OpenDev(void)
 {
-    std::lock_guard<std::mutex> lock(m_flow_mutex);
+    std::lock_guard<std::timed_mutex> lock(m_flow_mutex);
 
     if (m_dev != nullptr)
         return;
@@ -113,7 +115,7 @@ void MythTV::OpenDev(void)
         return;
     }
 
-    if (!m_usbio.Open(m_params.serial))
+    if (!m_usbio.Open(m_params.serial, &getErrorCallBack()))
     {
         delete m_dev;
         m_dev = nullptr;
@@ -142,11 +144,13 @@ void MythTV::Fatal(const string & msg)
     LOG(Logger::CRIT) << msg << flush;
 
     std::unique_lock<std::mutex> lk(m_run_mutex);
-    m_fatal_msg = msg;
-    m_fatal = true;
-    m_run   = false;
+    if (!m_fatal)
+    {
+        m_fatal_msg = msg;
+        m_fatal = true;
 
-    Terminate();
+        Terminate();
+    }
 }
 
 bool MythTV::StartEncoding(void)
@@ -195,13 +199,17 @@ bool MythTV::StopEncoding(bool soft)
     }
     m_flow_mutex.unlock();
 
-    if (m_dev->StopEncoding())
+    m_streaming = false;
+    m_flow_cond.notify_all();
+
+    LOG(Logger::NOTICE) << "Stopping encoder." << flush;
+    if (!m_dev->StopEncoding())
     {
-        m_streaming = false;
-        m_flow_cond.notify_all();
+        LOG(Logger::NOTICE) << "Encoder stopped" << flush;
         return true;
     }
 
+    LOG(Logger::WARNING) << "Stopping encoder failed." << flush;
     return false;
 }
 
@@ -476,9 +484,10 @@ void Commands::Run(void)
 }
 
 Buffer::Buffer(MythTV * parent)
-    : m_thread(),
-      m_parent(parent),
-      m_cb(std::bind(&Buffer::Fill, this, std::placeholders::_1,
+    : m_thread()
+    , m_parent(parent)
+    , m_run(true)
+    , m_cb(std::bind(&Buffer::Fill, this, std::placeholders::_1,
                      std::placeholders::_2))
 {
     m_heartbeat = std::chrono::system_clock::now();
@@ -491,23 +500,27 @@ void Buffer::Fill(void * data, size_t len)
 
     static int dropped = 0;
 
-    m_parent->m_flow_mutex.lock();
-    if (m_data.size() < MAX_QUEUE)
+    if (m_parent->m_flow_mutex.try_lock_for(std::chrono::seconds(2)))
     {
-        block_t blk(reinterpret_cast<uint8_t *>(data),
-                    reinterpret_cast<uint8_t *>(data) + len);
+        if (m_data.size() < MAX_QUEUE)
+        {
+            block_t blk(reinterpret_cast<uint8_t *>(data),
+                        reinterpret_cast<uint8_t *>(data) + len);
 
-        m_data.push(blk);
-        dropped = 0;
-    }
-    else if (++dropped % 25 == 0)
-    {
-        LOG(Logger::WARNING) << "Packet queue overrun.  Dropped " << dropped
-                             << "packets." << flush;
-    }
+            m_data.push(blk);
+            dropped = 0;
+        }
+        else if (++dropped % 25 == 0)
+        {
+            LOG(Logger::WARNING) << "Packet queue overrun.  Dropped " << dropped
+                                 << "packets." << flush;
+        }
 
-    m_parent->m_flow_mutex.unlock();
-    m_parent->m_flow_cond.notify_all();
+        m_parent->m_flow_mutex.unlock();
+        m_parent->m_flow_cond.notify_all();
+    }
+    else
+        LOG(Logger::WARNING) << "Fill: Timed out on flow lock." << flush;
 
     m_heartbeat = std::chrono::system_clock::now();
 }
@@ -521,6 +534,7 @@ void Buffer::Run(void)
     uint64_t   written = 0;
     uint64_t   write_cnt = 0;
     uint64_t   empty_cnt = 0;
+    std::mutex tmp; // This is the only consumer, so can use local
 
     Logger::setThreadName("Buffer");
     LOG(Logger::INFO) << "Buffer: Ready for data." << flush;
@@ -529,8 +543,8 @@ void Buffer::Run(void)
     {
         if (wait)
         {
-            std::unique_lock<std::mutex> lk(m_parent->m_flow_mutex);
-            m_parent->m_flow_cond.wait(lk);
+            std::unique_lock<std::mutex> lk(tmp);
+            m_parent->m_flow_cond.wait_for(lk, std::chrono::seconds(1));
             wait = false;
         }
 
@@ -556,14 +570,17 @@ void Buffer::Run(void)
             if (m_parent->m_xon)
             {
                 block_t pkt;
-                m_parent->m_flow_mutex.lock();
-                if (!m_data.empty())
+
+                if (m_parent->m_flow_mutex.try_lock_for(std::chrono::seconds(1)))
                 {
-                    pkt = m_data.front();
-                    m_data.pop();
-                    is_empty = m_data.empty();
+                    if (!m_data.empty())
+                    {
+                        pkt = m_data.front();
+                        m_data.pop();
+                        is_empty = m_data.empty();
+                    }
+                    m_parent->m_flow_mutex.unlock();
                 }
-                m_parent->m_flow_mutex.unlock();
 
                 if (!pkt.empty())
                 {
@@ -584,13 +601,15 @@ void Buffer::Run(void)
         else
         {
             // Clear packet queue
-            m_parent->m_flow_mutex.lock();
-            if (!m_data.empty())
+            if (m_parent->m_flow_mutex.try_lock_for(std::chrono::seconds(1)))
             {
-                stack_t dummy;
-                std::swap(m_data, dummy);
+                if (!m_data.empty())
+                {
+                    stack_t dummy;
+                    std::swap(m_data, dummy);
+                }
+                m_parent->m_flow_mutex.unlock();
             }
-            m_parent->m_flow_mutex.unlock();
 
             wait = true;
         }

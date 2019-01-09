@@ -9,11 +9,12 @@
 using namespace std;
 
 USBWrapper_t::USBWrapper_t(void)
-    : m_ctx(nullptr),
-      m_dev_list(nullptr),
-      m_dev_cnt(0),
-      m_device(nullptr),
-      m_handle(nullptr)
+    : m_use_error_cb(false)
+    , m_ctx(nullptr)
+    , m_dev_list(nullptr)
+    , m_dev_cnt(0)
+    , m_device(nullptr)
+    , m_handle(nullptr)
 {
     int ret;
 
@@ -29,7 +30,13 @@ USBWrapper_t::USBWrapper_t(void)
       LIBUSB_LOG_LEVEL_DEBUG
       logging goes to stderr!!! ick!!!
     */
+
+#if LIBUSB_API_VERSION >= 0x01000106
+    libusb_set_option(m_ctx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_NONE);
+#else
     libusb_set_debug(m_ctx, LIBUSB_LOG_LEVEL_NONE);
+#endif
+
 }
 
 USBWrapper_t::~USBWrapper_t(void)
@@ -268,10 +275,13 @@ bool USBWrapper_t::ResetBus(uint8_t bus)
 }
 #endif
 
-bool USBWrapper_t::Open(const string& serial)
+bool USBWrapper_t::Open(const string& serial, callback_t * error_cb)
 {
     int idx = 0;
     int ret = 0;
+
+    if (error_cb)
+        this->setErrorCB(*error_cb);
 
     if (m_ctx == NULL)
     {
@@ -472,6 +482,8 @@ int USBWrapper_t::controlMessage(USBWrapperControlMessage_t &msg,
     if (r < 0)
     {
         wrapLogError("cannot send control message: %s", strMsg(r));
+        if (m_use_error_cb)
+            m_error_cb();
         return retMsg(r);
     }
 

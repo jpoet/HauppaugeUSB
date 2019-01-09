@@ -31,6 +31,7 @@
 #include <queue>
 #include <condition_variable>
 #include <thread>
+#include <mutex>
 
 class MythTV;
 
@@ -63,9 +64,9 @@ class Buffer
 
   private:
     std::thread m_thread;
+    MythTV     *m_parent;
     std::atomic_bool m_run;
 
-    MythTV* m_parent;
     DataTransfer::callback_t m_cb;
 
     uint32_t m_block_size;
@@ -129,9 +130,13 @@ class MythTV
 
     DataTransfer::callback_t & getWriteCallBack(void)
       { return m_buffer.getWriteCallBack(); }
+    USBWrapper_t::callback_t & getErrorCallBack(void)
+      { return m_error_cb; }
 
     bool StartEncoding(void);
     bool StopEncoding(bool soft = false);
+
+    void USBError(void) { Fatal("Detected Error with USB."); }
 
   protected:
     std::string  m_desc;
@@ -152,11 +157,13 @@ class MythTV
     std::string  m_fatal_msg;
     bool         m_fatal;
 
-    std::mutex        m_flow_mutex;
+    std::timed_mutex        m_flow_mutex;
     std::condition_variable m_flow_cond;
     std::atomic<bool> m_streaming;
     std::atomic<bool> m_xon;
     std::atomic<bool> m_ready;
+
+    USBWrapper_t::callback_t m_error_cb;
 };
 
 #endif
