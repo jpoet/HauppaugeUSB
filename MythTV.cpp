@@ -214,7 +214,7 @@ bool MythTV::StopEncoding(string & resultmsg, bool soft)
     m_flow_cond.notify_all();
 
     LOG(Logger::NOTICE) << "Stopping encoder." << flush;
-    if (m_dev->StopEncoding())
+    if (!m_dev->StopEncoding())
     {
         resultmsg = m_dev->ErrorString();
         return false;
