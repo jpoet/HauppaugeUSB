@@ -76,7 +76,7 @@ inline int wrapMutexDestroy(wrapMutex_t *m) {
 
 inline int wrapMutexLock(wrapMutex_t *m) {
     struct timespec wait = {0,};
-    wait.tv_sec = 5;
+    wait.tv_sec = 10;
 
     return (pthread_mutex_timedlock(m, &wait) == 0) ? WRAPOS_OK : WRAPOS_ERROR;
 }

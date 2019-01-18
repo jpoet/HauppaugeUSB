@@ -648,7 +648,7 @@ bool HauppaugeDev::StopEncoding(void)
     if(!m_encDev->stopCapture())
     {
         m_errmsg = "Encoder stop capture failed.";
-        LOG(Logger::ERR) << m_errmsg << flush;
+        LOG(Logger::WARNING) << m_errmsg << flush;
         return false;
     }
     log_ports();

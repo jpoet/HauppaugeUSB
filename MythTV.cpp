@@ -65,7 +65,9 @@ void MythTV::Terminate(void)
 {
     LOG(Logger::CRIT) <<"Terminating." << flush;
     m_run = false;
-    StopEncoding(true);
+
+    string msg;
+    StopEncoding(msg, true);
 
     m_flow_cond.notify_all();
     m_run_cond.notify_all();
@@ -153,47 +155,56 @@ void MythTV::Fatal(const string & msg)
     }
 }
 
-bool MythTV::StartEncoding(void)
+bool MythTV::StartEncoding(string & resultmsg)
 {
     if (m_streaming)
     {
-        LOG(Logger::WARNING) << "Already streaming!" << flush;
+        resultmsg = "Already streaming!";
+        LOG(Logger::WARNING) << resultmsg << flush;
         return true;
     }
     if (!m_ready)
     {
-        LOG(Logger::CRIT) << "Hauppauge device not ready." << flush;
+        resultmsg = "Hauppauge device not ready.";
+        LOG(Logger::CRIT) << resultmsg << flush;
         return false;
     }
 
-    if (m_dev->StartEncoding())
+    if (!m_dev->StartEncoding())
     {
-        m_streaming = true;
-        m_flow_cond.notify_all();
-        return true;
+        resultmsg = m_dev->ErrorString();
+        return false;
     }
 
-    return false;
+    resultmsg.clear();
+    m_streaming = true;
+    m_flow_cond.notify_all();
+    return true;
 }
 
-bool MythTV::StopEncoding(bool soft)
+bool MythTV::StopEncoding(string & resultmsg, bool soft)
 {
     if (!m_streaming)
     {
         if (!soft)
-            LOG(Logger::WARNING) << "Already not streaming!" << flush;
+        {
+            resultmsg = "Already not streaming!";
+            LOG(Logger::WARNING) << resultmsg << flush;
+        }
         return true;
     }
     if (!m_ready)
     {
-        LOG(Logger::CRIT) << "Hauppauge device not ready." << flush;
+        resultmsg = "Hauppauge device not ready.";
+        LOG(Logger::CRIT) << resultmsg << flush;
         return false;
     }
 
     m_flow_mutex.lock();
     if (!m_dev)
     {
-        LOG(Logger::CRIT) << "Invalid Hauppauge device." << flush;
+        resultmsg = "Invalid Hauppauge device.";
+        LOG(Logger::CRIT) << resultmsg << flush;
         m_flow_mutex.unlock();
         return false;
     }
@@ -203,14 +214,15 @@ bool MythTV::StopEncoding(bool soft)
     m_flow_cond.notify_all();
 
     LOG(Logger::NOTICE) << "Stopping encoder." << flush;
-    if (!m_dev->StopEncoding())
+    if (m_dev->StopEncoding())
     {
-        LOG(Logger::NOTICE) << "Encoder stopped" << flush;
-        return true;
+        resultmsg = m_dev->ErrorString();
+        return false;
     }
 
-    LOG(Logger::WARNING) << "Stopping encoder failed." << flush;
-    return false;
+    resultmsg.clear();
+    LOG(Logger::NOTICE) << "Encoder stopped" << flush;
+    return true;
 }
 
 Commands::Commands(MythTV * parent)
@@ -370,10 +382,12 @@ bool Commands::process_command(const string & cmd)
     }
     if (starts_with(tokens[0], "StartStreaming"))
     {
-        if (m_parent->StartEncoding())
+        string resultmsg;
+
+        if (m_parent->StartEncoding(resultmsg))
             send_status(cmd, serial, "OK:Started");
         else
-            send_status(cmd, serial, "ERR:Failed to start encoding.");
+            send_status(cmd, serial, "ERR:" + resultmsg);
         return true;
     }
     if (starts_with(tokens[0], "StopStreaming"))
@@ -381,10 +395,12 @@ bool Commands::process_command(const string & cmd)
         /* This does not close the stream!  When Myth is done with
          * this 'recording' ExternalChannel::EnterPowerSavingMode()
          * will be called, which invokes CloseRecorder() */
-        if (m_parent->StopEncoding())
+        string resultmsg;
+
+        if (m_parent->StopEncoding(resultmsg))
             send_status(cmd, serial, "OK:Stopped");
         else
-            send_status(cmd, serial, "ERR:Failed to start encoding.");
+            send_status(cmd, serial, "ERR:" + resultmsg);
         return true;
     }
 

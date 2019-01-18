@@ -133,8 +133,8 @@ class MythTV
     USBWrapper_t::callback_t & getErrorCallBack(void)
       { return m_error_cb; }
 
-    bool StartEncoding(void);
-    bool StopEncoding(bool soft = false);
+    bool StartEncoding(std::string & resultmsg);
+    bool StopEncoding(std::string & resultmsg, bool soft = false);
 
     void USBError(void) { Fatal("Detected Error with USB."); }
 
