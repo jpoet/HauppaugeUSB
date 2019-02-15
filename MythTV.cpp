@@ -27,7 +27,7 @@
 using namespace std;
 using namespace boost::algorithm;
 
-const string VERSION = "0.2";
+const string VERSION = "0.5";
 
 MythTV::MythTV(const Parameters & params, const string & desc)
     : m_desc(desc)
