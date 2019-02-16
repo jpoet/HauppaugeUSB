@@ -248,7 +248,7 @@ mythbackend and have it use this input.
 ----
 ## Troubleshooting
 
-After a fresh reboot, the Colossus2 will occasionally drop off the USB bus, the
+After a fresh reboot, the Colossus2 will on occasion drop off the USB bus, the
 first time it is used.  When hauppauge2 is run, the first thing it sends
 out to the log is the Bus and Port of the device.  This is allows you to
 reset the USB bus for that device to get it back.  For example, if the first
@@ -264,11 +264,3 @@ echo "auto" | sudo dd of="/sys/bus/usb/devices/usb${BUS}/power/control"
 echo "on"   | sudo dd of="/sys/bus/usb/devices/usb${BUS}/power/control"
 ```
 After that, the Colossus2 seems to work reliably until the next reboot.
-
-### Review of issues
-
-A user on the MythTV forum has posted a detailed review of possible issues:
-
-https://forum.mythtv.org/viewtopic.php?f=2&t=2417&sid=91dea4e835b50e7564e37eda049773dd
-
-At least some of these issues are dependent on the STB used.
