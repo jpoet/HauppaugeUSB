@@ -14,6 +14,8 @@ The issue with interlaced fields being in the wrong order has been fixed.
 
 AC3 audio codec now works via HDMI.
 
+Note: Even when using HDMI for audio, the models with a S/PDIF input are required if you want AC3 surround sound.
+
 ----
 ## Installing
 
