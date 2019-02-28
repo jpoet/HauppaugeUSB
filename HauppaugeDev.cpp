@@ -93,7 +93,7 @@ void HauppaugeDev::configure(void)
     RegistryAccess::writeDword("VideoOutputBitrate", m_params.videoBitrate);
     RegistryAccess::writeDword("VBRMin", m_params.videoVBRMin);
     RegistryAccess::writeDword("VBRMax", m_params.videoVBRMax);
-
+    RegistryAccess::writeDword("VideoCodingMode", m_params.videoCodingMode);
     RegistryAccess::writeDword("VideoProfile", m_params.videoProfile);
     RegistryAccess::writeDword("Profile", m_params.videoProfile);
 
