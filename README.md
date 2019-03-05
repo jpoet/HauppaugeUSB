@@ -27,20 +27,26 @@ sudo dnf install make gcc gcc-c++ kernel-devel libstdc++-devel boost-devel libus
 
 #### Ubuntu
 ```
-sudo apt-get install libboost-log-dev libboost-program-options-dev libusb-1.0-0-dev build-essential
+sudo apt-get install libboost-log-dev libboost-program-options-dev libusb-1.0-0-dev build-essential pkg-config
 ```
 
 #### MythTV
 If you want to use this with MythTV, you will need
 [fixes/29](https://github.com/MythTV/mythtv/tree/fixes/29) from 2018-03-01 or [master](https://github.com/MythTV/mythtv/tree/master) from 2018-02-25.  MythTV [fixes/30](https://github.com/MythTV/mythtv/tree/fixes/30) is recommended for the best experience.
 
-### Grab the prepared "driver" from Hauppauge into the submodule hauppauge_hdpvr2
+### Grab this repository into a directory of your choice
+```
+cd ~/workspace
+git clone https://github.com/snaptv/HauppaugeUSB.git
+cd HauppaugeUSB
+```
+
+### Grab the prepared "driver" from Hauppauge into the submodule hauppauge_hdpvr2 by issuing:
 ```
 git submodule update --init
 ```
 
 ### Build it
-The installation directory tree is currently hard-coded to be /opt/Hauppauge.
 ```
 make
 sudo make install
