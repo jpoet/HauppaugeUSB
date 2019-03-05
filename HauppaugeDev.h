@@ -31,10 +31,13 @@
 class HauppaugeDev
 {
   public:
+    enum constants { MAX_RETRY = 300 };
+
     HauppaugeDev(const Parameters & params);
     ~HauppaugeDev(void);
 
-    bool Open(USBWrapper_t & usbio, DataTransfer::callback_t * cb = nullptr);
+    bool Open(USBWrapper_t & usbio, bool ac3,
+              DataTransfer::callback_t * cb = nullptr);
     void Close(void);
 
     bool StartEncoding(void);
@@ -71,8 +74,6 @@ class HauppaugeDev
 
     std::string         m_errmsg;
     bool                m_err;
-
-    int                 m_max_retry;
 };
 
 #endif

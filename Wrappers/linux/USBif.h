@@ -6,11 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <tuple>
-
-#if 0
-#include <stdint.h>
-#include <string.h>
-#endif
+#include <functional>
 
 //#include "common.h"
 #include "log.h"
@@ -112,10 +108,12 @@ class USBWrapperAsyncCtx_t
 class USBWrapper_t
 {
   public:
+    using callback_t = std::function<void()>;
+
     USBWrapper_t(void);
     ~USBWrapper_t(void);
 
-    bool Open(const std::string& serial);
+    bool Open(const std::string& serial, callback_t * error_cb = nullptr);
     void Close(void);
 
     bool DeviceList(DeviceIDVec& devs);
@@ -135,6 +133,12 @@ class USBWrapper_t
     int clearStall(uint8_t num);
     int abort(uint8_t num);
     int abortControl();
+
+    void setErrorCB(callback_t & cb) { m_error_cb = cb; m_use_error_cb = true; }
+
+  protected:
+    callback_t  m_error_cb;
+    bool        m_use_error_cb;
 
   private:
     bool DevName(std::string& name, struct libusb_device_descriptor& desc);

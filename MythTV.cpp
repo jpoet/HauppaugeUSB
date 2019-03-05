@@ -22,24 +22,27 @@
 #include <unistd.h>
 #include <poll.h>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
 
 using namespace std;
 using namespace boost::algorithm;
 
-const string VERSION = "0.1";
+const string VERSION = "0.5";
 
-MythTV::MythTV(const Parameters & params)
-    : m_buffer_max(188 * 100000),
-      m_block_size(m_buffer_max / 4),
-      m_buffer(this),
-      m_commands(this),
-      m_params(params),
-      m_dev(nullptr),
-      m_run(true),
-      m_fatal(false),
-      m_streaming(false),
-      m_xon(false),
-      m_ready(false)
+MythTV::MythTV(const Parameters & params, const string & desc)
+    : m_desc(desc)
+    , m_buffer_max(188 * 100000)
+    , m_block_size(m_buffer_max / 4)
+    , m_buffer(this)
+    , m_commands(this)
+    , m_params(params)
+    , m_dev(nullptr)
+    , m_run(true)
+    , m_fatal(false)
+    , m_streaming(false)
+    , m_xon(false)
+    , m_ready(false)
+    , m_error_cb(std::bind(&MythTV::USBError, this))
 {
     m_buffer.Start();
     m_commands.Start();
@@ -52,16 +55,19 @@ MythTV::~MythTV(void)
     m_commands.Join();
     m_buffer.Join();
 
-    std::lock_guard<std::mutex> lock(m_flow_mutex);
+    m_flow_mutex.lock();
     delete m_dev;
     m_dev = nullptr;
+    m_flow_mutex.unlock();
 }
 
 void MythTV::Terminate(void)
 {
     LOG(Logger::CRIT) <<"Terminating." << flush;
-    StopEncoding(true);
     m_run = false;
+
+    string msg;
+    StopEncoding(msg, true);
 
     m_flow_cond.notify_all();
     m_run_cond.notify_all();
@@ -92,7 +98,7 @@ void MythTV::Wait(void)
 
 void MythTV::OpenDev(void)
 {
-    std::lock_guard<std::mutex> lock(m_flow_mutex);
+    std::lock_guard<std::timed_mutex> lock(m_flow_mutex);
 
     if (m_dev != nullptr)
         return;
@@ -111,7 +117,7 @@ void MythTV::OpenDev(void)
         return;
     }
 
-    if (!m_usbio.Open(m_params.serial))
+    if (!m_usbio.Open(m_params.serial, &getErrorCallBack()))
     {
         delete m_dev;
         m_dev = nullptr;
@@ -119,7 +125,8 @@ void MythTV::OpenDev(void)
         return;
     }
 
-    if (!m_dev->Open(m_usbio, &getWriteCallBack()))
+    if (!m_dev->Open(m_usbio, (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3),
+                     &getWriteCallBack()))
     {
         Fatal(m_dev->ErrorString());
         delete m_dev;
@@ -139,83 +146,113 @@ void MythTV::Fatal(const string & msg)
     LOG(Logger::CRIT) << msg << flush;
 
     std::unique_lock<std::mutex> lk(m_run_mutex);
-    m_fatal_msg = msg;
-    m_fatal = true;
-    m_run   = false;
+    if (!m_fatal)
+    {
+        m_fatal_msg = msg;
+        m_fatal = true;
 
-    Terminate();
+        Terminate();
+    }
 }
 
-bool MythTV::StartEncoding(void)
+bool MythTV::StartEncoding(string & resultmsg)
 {
     if (m_streaming)
     {
-        LOG(Logger::WARNING) << "Already streaming!" << flush;
+        resultmsg = "Already streaming!";
+        LOG(Logger::WARNING) << resultmsg << flush;
         return true;
     }
     if (!m_ready)
     {
-        LOG(Logger::CRIT) << "Hauppauge device not ready." << flush;
+        resultmsg = "Hauppauge device not ready.";
+        LOG(Logger::CRIT) << resultmsg << flush;
         return false;
     }
 
-    if (m_dev->StartEncoding())
+    if (!m_dev->StartEncoding())
     {
-        m_streaming = true;
-        m_flow_cond.notify_all();
-        return true;
+        resultmsg = m_dev->ErrorString();
+        return false;
     }
 
-    return false;
+    resultmsg.clear();
+    m_streaming = true;
+    m_flow_cond.notify_all();
+    return true;
 }
 
-bool MythTV::StopEncoding(bool soft)
+bool MythTV::StopEncoding(string & resultmsg, bool soft)
 {
     if (!m_streaming)
     {
         if (!soft)
-            LOG(Logger::WARNING) << "Already not streaming!" << flush;
+        {
+            resultmsg = "Already not streaming!";
+            LOG(Logger::WARNING) << resultmsg << flush;
+        }
         return true;
     }
     if (!m_ready)
     {
-        LOG(Logger::CRIT) << "Hauppauge device not ready." << flush;
+        resultmsg = "Hauppauge device not ready.";
+        LOG(Logger::CRIT) << resultmsg << flush;
         return false;
     }
 
     m_flow_mutex.lock();
     if (!m_dev)
     {
-        LOG(Logger::CRIT) << "Invalid Hauppauge device." << flush;
+        resultmsg = "Invalid Hauppauge device.";
+        LOG(Logger::CRIT) << resultmsg << flush;
         m_flow_mutex.unlock();
         return false;
     }
     m_flow_mutex.unlock();
 
-    if (m_dev->StopEncoding())
+    m_streaming = false;
+    m_flow_cond.notify_all();
+
+    LOG(Logger::NOTICE) << "Stopping encoder." << flush;
+    if (!m_dev->StopEncoding())
     {
-        m_streaming = false;
-        m_flow_cond.notify_all();
-        return true;
+        resultmsg = m_dev->ErrorString();
+        return false;
     }
 
-    return false;
+    resultmsg.clear();
+    LOG(Logger::NOTICE) << "Encoder stopped" << flush;
+    return true;
 }
 
-bool Commands::send_status(const string & command, const string & status)
+Commands::Commands(MythTV * parent)
+    : m_thread()
+    , m_parent(parent)
+    , m_api_version(1)
 {
-    int len = write(2, status.data(), status.size());
-    write(2, "\n", 1);
+}
 
-    if (len != static_cast<int>(status.size()))
+bool Commands::send_status(const string & command, const string & serial,
+                           const string & status)
+{
+    string buf;
+    if (m_api_version > 1)
+        buf = serial + ":" + status + "\n";
+    else
+        buf = status + "\n";
+
+    int len = write(2, buf.data(), buf.size());
+
+    if (len != static_cast<int>(buf.size()))
     {
         LOG(Logger::ERR) << "Status -- Wrote " << len
-                         << " of " << status.size()
+                         << " of " << buf.size()
                          << " bytes of status '" << status << "'" << flush;
         return false;
     }
     else
-        LOG(Logger::NOTICE) << command << ": '" << status << "'" << flush;
+        LOG(Logger::NOTICE) << command << ": '"
+                            << serial << ":" << status << "'" << flush;
 
     return true;
 }
@@ -224,115 +261,178 @@ bool Commands::process_command(const string & cmd)
 {
     LOG(Logger::DEBUG) << "Processing '" << cmd << "'" << flush;
 
-    if (starts_with(cmd, "Version?"))
+    if (starts_with(cmd, "APIVersion?"))
     {
         std::unique_lock<std::mutex> lk(m_parent->m_run_mutex);
         if (m_parent->m_fatal)
-            send_status(cmd, "ERR:" + m_parent->m_fatal_msg);
+            send_status(cmd, "", "ERR:" + m_parent->m_fatal_msg);
         else
-            send_status(cmd, "OK:" + VERSION);
+        {
+            send_status(cmd, "", "OK:" + std::to_string(max_api_version));
+            m_api_version = max_api_version;
+        }
         return true;
     }
-    if (starts_with(cmd, "HasLock?"))
+
+    string         serial;
+    deque<string>  tokens;
+    boost::split(tokens, cmd, boost::is_any_of(":"));
+    if (m_api_version > 1)
+    {
+        if (tokens.size() < 2)
+        {
+            send_status(cmd, "-1", "ERR:Malformed message. Expecting "
+                        "<serial>:command<:optional data>, but received \"" +
+                        cmd + "\"");
+            return true;
+        }
+        serial = tokens[0];
+        tokens.pop_front();
+    }
+
+    if (starts_with(tokens[0], "Version?"))
+    {
+        std::unique_lock<std::mutex> lk(m_parent->m_run_mutex);
+        if (m_parent->m_fatal)
+            send_status(cmd, serial, "ERR:" + m_parent->m_fatal_msg);
+        else
+            send_status(cmd, serial, "OK:" + VERSION);
+        return true;
+    }
+    if (starts_with(tokens[0], "Description?"))
+    {
+        send_status(cmd, serial, "OK:" + m_parent->m_desc);
+        return true;
+    }
+    if (starts_with(tokens[0], "HasLock?"))
     {
         if (m_parent->m_ready)
-            send_status(cmd, "OK:Yes");
+            send_status(cmd, serial, "OK:Yes");
         else
-            send_status(cmd, "OK:No");
+            send_status(cmd, serial, "OK:No");
         return true;
     }
-    if (starts_with(cmd, "SignalStrengthPercent"))
+    if (starts_with(tokens[0], "SignalStrengthPercent"))
     {
         if (m_parent->m_ready)
-            send_status(cmd, "OK:100");
+            send_status(cmd, serial, "OK:100");
         else
-            send_status(cmd, "OK:20");
+            send_status(cmd, serial, "OK:20");
         return true;
     }
-    if (starts_with(cmd, "LockTimeout"))
+    if (starts_with(tokens[0], "LockTimeout"))
     {
-        send_status(cmd, "OK:12000");
+        send_status(cmd, serial, "OK:12000");
         m_parent->OpenDev();
         return true;
     }
-    if (starts_with(cmd, "HasTuner?"))
+    if (starts_with(tokens[0], "HasTuner?"))
     {
-        send_status(cmd, "OK:No");
+        send_status(cmd, serial, "OK:No");
         return true;
     }
-    if (starts_with(cmd, "HasPictureAttributes?"))
+    if (starts_with(tokens[0], "HasPictureAttributes?"))
     {
-        send_status(cmd, "OK:No");
+        send_status(cmd, serial, "OK:No");
         return true;
     }
-    if (starts_with(cmd, "SendBytes"))
+    if (starts_with(tokens[0], "SendBytes"))
     {
         // Used when FlowControl is Polling
-        send_status(cmd, "ERR:Not supported");
+        send_status(cmd, serial, "ERR:Not supported");
+        return true;
     }
-    else if (starts_with(cmd, "XON"))
+    if (starts_with(tokens[0], "XON"))
     {
         // Used when FlowControl is XON/XOFF
-        send_status(cmd, "OK");
+        send_status(cmd, serial, "OK");
         m_parent->m_xon = true;
         m_parent->m_flow_cond.notify_all();
+        return true;
     }
-    else if (starts_with(cmd, "XOFF"))
+    if (starts_with(tokens[0], "XOFF"))
     {
-        send_status(cmd, "OK");
+        send_status(cmd, serial, "OK");
         // Used when FlowControl is XON/XOFF
         m_parent->m_xon = false;
         m_parent->m_flow_cond.notify_all();
+        return true;
     }
-    else if (starts_with(cmd, "TuneChannel"))
-    {
-        // Used if we announce that we have a 'tuner'
-        send_status(cmd, "ERR:Not supported");
-    }
-    else if (starts_with(cmd, "IsOpen?"))
+    if (starts_with(tokens[0], "IsOpen?"))
     {
         std::unique_lock<std::mutex> lk(m_parent->m_run_mutex);
         if (m_parent->m_fatal)
-            send_status(cmd, "ERR:" + m_parent->m_fatal_msg);
+            send_status(cmd, serial, "ERR:" + m_parent->m_fatal_msg);
         else if (m_parent->m_ready)
-            send_status(cmd, "OK:Open");
+            send_status(cmd, serial, "OK:Open");
         else
-            send_status(cmd, "WARN:Not Open yet");
+            send_status(cmd, serial, "WARN:Not Open yet");
+        return true;
     }
-    else if (starts_with(cmd, "CloseRecorder"))
+    if (starts_with(tokens[0], "CloseRecorder"))
     {
-        send_status(cmd, "OK:Terminating");
+        send_status(cmd, serial, "OK:Terminating");
         m_parent->Terminate();
         return true;
     }
-    else if (starts_with(cmd, "FlowControl?"))
+    if (starts_with(tokens[0], "FlowControl?"))
     {
-        send_status(cmd, "OK:XON/XOFF");
+        send_status(cmd, serial, "OK:XON/XOFF");
+        return true;
     }
-    else if (starts_with(cmd, "BlockSize"))
+    if (starts_with(tokens[0], "StartStreaming"))
     {
-        m_parent->BlockSize(stoul(cmd.substr(10)));
-        send_status(cmd, "OK");
-    }
-    else if (starts_with(cmd, "StartStreaming"))
-    {
-        if (m_parent->StartEncoding())
-            send_status(cmd, "OK:Started");
+        string resultmsg;
+
+        if (m_parent->StartEncoding(resultmsg))
+            send_status(cmd, serial, "OK:Started");
         else
-            send_status(cmd, "ERR:Failed to start encoding.");
+            send_status(cmd, serial, "ERR:" + resultmsg);
+        return true;
     }
-    else if (starts_with(cmd, "StopStreaming"))
+    if (starts_with(tokens[0], "StopStreaming"))
     {
         /* This does not close the stream!  When Myth is done with
          * this 'recording' ExternalChannel::EnterPowerSavingMode()
          * will be called, which invokes CloseRecorder() */
-        if (m_parent->StopEncoding())
-            send_status(cmd, "OK:Stopped");
+        string resultmsg;
+
+        if (m_parent->StopEncoding(resultmsg))
+            send_status(cmd, serial, "OK:Stopped");
         else
-            send_status(cmd, "ERR:Failed to start encoding.");
+            send_status(cmd, serial, "ERR:" + resultmsg);
+        return true;
+    }
+
+    // The following commands must have <data>
+    if (tokens.size() < 2)
+    {
+        send_status(cmd, serial, "ERR:Malformed message. Expecting "
+                    "<serial>:command:<data>, but received \"" +
+                    cmd + "\"");
+        return true;
+    }
+
+    if (starts_with(tokens[0], "APIVersion"))
+    {
+        std::unique_lock<std::mutex> lk(m_parent->m_run_mutex);
+        m_api_version = stoul(tokens[1]);
+        send_status(cmd, serial, "OK:API Version " +
+                    std::to_string(m_api_version));
+    }
+    else if (starts_with(tokens[0], "TuneChannel"))
+    {
+        // Used if we announce that we have a 'tuner'
+        send_status(cmd, serial, "ERR:Not supported");
+    }
+    else if (starts_with(tokens[0], "BlockSize"))
+    {
+        m_parent->BlockSize(stoul(tokens[1]));
+        send_status(cmd, serial, "OK");
     }
     else
-        send_status(cmd, "ERR:Unrecognized command");
+        send_status(cmd, serial, "ERR:Unrecognized command: '" +
+                    tokens[0] + "'");
 
     return true;
 }
@@ -400,9 +500,10 @@ void Commands::Run(void)
 }
 
 Buffer::Buffer(MythTV * parent)
-    : m_thread(),
-      m_parent(parent),
-      m_cb(std::bind(&Buffer::Fill, this, std::placeholders::_1,
+    : m_thread()
+    , m_parent(parent)
+    , m_run(true)
+    , m_cb(std::bind(&Buffer::Fill, this, std::placeholders::_1,
                      std::placeholders::_2))
 {
     m_heartbeat = std::chrono::system_clock::now();
@@ -415,23 +516,27 @@ void Buffer::Fill(void * data, size_t len)
 
     static int dropped = 0;
 
-    m_parent->m_flow_mutex.lock();
-    if (m_data.size() < MAX_QUEUE)
+    if (m_parent->m_flow_mutex.try_lock_for(std::chrono::seconds(2)))
     {
-        block_t blk(reinterpret_cast<uint8_t *>(data),
-                    reinterpret_cast<uint8_t *>(data) + len);
+        if (m_data.size() < MAX_QUEUE)
+        {
+            block_t blk(reinterpret_cast<uint8_t *>(data),
+                        reinterpret_cast<uint8_t *>(data) + len);
 
-        m_data.push(blk);
-        dropped = 0;
-    }
-    else if (++dropped % 25 == 0)
-    {
-        LOG(Logger::WARNING) << "Packet queue overrun.  Dropped " << dropped
-                             << "packets." << flush;
-    }
+            m_data.push(blk);
+            dropped = 0;
+        }
+        else if (++dropped % 25 == 0)
+        {
+            LOG(Logger::WARNING) << "Packet queue overrun.  Dropped " << dropped
+                                 << "packets." << flush;
+        }
 
-    m_parent->m_flow_mutex.unlock();
-    m_parent->m_flow_cond.notify_all();
+        m_parent->m_flow_mutex.unlock();
+        m_parent->m_flow_cond.notify_all();
+    }
+    else
+        LOG(Logger::WARNING) << "Fill: Timed out on flow lock." << flush;
 
     m_heartbeat = std::chrono::system_clock::now();
 }
@@ -445,6 +550,7 @@ void Buffer::Run(void)
     uint64_t   written = 0;
     uint64_t   write_cnt = 0;
     uint64_t   empty_cnt = 0;
+    std::mutex tmp; // This is the only consumer, so can use local
 
     Logger::setThreadName("Buffer");
     LOG(Logger::INFO) << "Buffer: Ready for data." << flush;
@@ -453,8 +559,8 @@ void Buffer::Run(void)
     {
         if (wait)
         {
-            std::unique_lock<std::mutex> lk(m_parent->m_flow_mutex);
-            m_parent->m_flow_cond.wait(lk);
+            std::unique_lock<std::mutex> lk(tmp);
+            m_parent->m_flow_cond.wait_for(lk, std::chrono::seconds(1));
             wait = false;
         }
 
@@ -480,14 +586,17 @@ void Buffer::Run(void)
             if (m_parent->m_xon)
             {
                 block_t pkt;
-                m_parent->m_flow_mutex.lock();
-                if (!m_data.empty())
+
+                if (m_parent->m_flow_mutex.try_lock_for(std::chrono::seconds(1)))
                 {
-                    pkt = m_data.front();
-                    m_data.pop();
-                    is_empty = m_data.empty();
+                    if (!m_data.empty())
+                    {
+                        pkt = m_data.front();
+                        m_data.pop();
+                        is_empty = m_data.empty();
+                    }
+                    m_parent->m_flow_mutex.unlock();
                 }
-                m_parent->m_flow_mutex.unlock();
 
                 if (!pkt.empty())
                 {
@@ -508,13 +617,15 @@ void Buffer::Run(void)
         else
         {
             // Clear packet queue
-            m_parent->m_flow_mutex.lock();
-            if (!m_data.empty())
+            if (m_parent->m_flow_mutex.try_lock_for(std::chrono::seconds(1)))
             {
-                stack_t dummy;
-                std::swap(m_data, dummy);
+                if (!m_data.empty())
+                {
+                    stack_t dummy;
+                    std::swap(m_data, dummy);
+                }
+                m_parent->m_flow_mutex.unlock();
             }
-            m_parent->m_flow_mutex.unlock();
 
             wait = true;
         }

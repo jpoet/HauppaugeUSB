@@ -9,6 +9,14 @@ being said, It is working for me.
 This can be used at the command-line as well as an "External Recorder" for MythTV.
 
 ----
+## News
+The issue with interlaced fields being in the wrong order has been fixed.
+
+AC3 audio codec now works via HDMI.
+
+Note: Even when using HDMI for audio, the models with a S/PDIF input are required if you want AC3 surround sound.
+
+----
 ## Installing
 
 ### Install dependancies
@@ -19,10 +27,13 @@ sudo dnf install make gcc gcc-c++ kernel-devel libstdc++-devel boost-devel libus
 
 #### Ubuntu
 ```
-sudo apt-get install libboost-log-dev libboost-programs-options-dev libusb-1.0-0-dev build-essential
+sudo apt-get install libboost-log-dev libboost-program-options-dev libusb-1.0-0-dev build-essential
 ```
 
-#### This version is not inteded for use with MythTV, but rather the SnapTV plugin system, where this stream is sent into a pipe (fifo)
+#### MythTV
+If you want to use this with MythTV, you will need
+[fixes/29](https://github.com/MythTV/mythtv/tree/fixes/29) from 2018-03-01 or [master](https://github.com/MythTV/mythtv/tree/master) from 2018-02-25.  MythTV [fixes/30](https://github.com/MythTV/mythtv/tree/fixes/30) is recommended for the best experience.
+
 ### Grab the prepared "driver" from Hauppauge into the submodule hauppauge_hdpvr2
 ```
 git submodule update --init
@@ -67,23 +78,6 @@ A lot of the options don't work unless just the right combination is
 selected.  The program does not currently protect you from choosing bad
 combinations, because in many cases they *should* work, but have not been
 implemented yet.
-
-For example, selecting `-i 3 -a 3 -d 2` does not currently get you AC3 audio
-with your HDMI video.  When I asked Hauppauge about this, they said:
->There are basically 3 audio paths to consider:
- > 1) I2S PCM audio from HDMI
- > 2) I2S PCM Audio from CX28010 (L/R Stereo baseband audio in)
- > 3) I2S “S/PDIF” Digital Audio via the CS8416 (could be from either external S/PDIF connector, or from 7842 HDMI based on 8416 source settings)
- >
-> All AC-3 Audio happens via Path 3; you need to set the proper input on the CS8416, but the I2S bus (selected via “Port E”) would be the same as for the S/PDIF connector.
->
-> NOTE: You also need to update the EDID to actually claim it supports AC-3 on the HDMI port; if you look at the unit running under Windows you will see the EDID change if AC-3 is set to be allowed in our apps.
->
-> Also, even if you allow it, there’s no promise that the HDMI source will  use it (it may not even be AC-3 capable), so you would have to detect in the code if AC-3 is actually present and switch from the normal PCM audio path(case #1) from 7842 to the AC-3 audio path via 8416 (case #3).  This can change dynamically with content depending on the HDMI source device; so you probably have to poll for any changes.
-
-Also, `-i 1 -a 1 -d 2` does not currently get you AC3 via S/PDIF with your
-component video.  I think I know how to get that working, but it will
-require another patch against the Hauppauge code tree.
 
 ----
 ### Command line examples
@@ -219,7 +213,7 @@ mythbackend and have it use this input.
 ----
 ## Troubleshooting
 
-After a fresh reboot, the Colossus2 will occasionally drop off the USB bus, the
+After a fresh reboot, the Colossus2 will on occasion drop off the USB bus, the
 first time it is used.  When hauppauge2 is run, the first thing it sends
 out to the log is the Bus and Port of the device.  This is allows you to
 reset the USB bus for that device to get it back.  For example, if the first
@@ -235,9 +229,3 @@ echo "auto" | sudo dd of="/sys/bus/usb/devices/usb${BUS}/power/control"
 echo "on"   | sudo dd of="/sys/bus/usb/devices/usb${BUS}/power/control"
 ```
 After that, the Colossus2 seems to work reliably until the next reboot.
-
-### Review of issues
-
-A user on the MythTV forum has posted a detailed review of possible issues:
-
-https://forum.mythtv.org/viewtopic.php?f=2&t=2417&sid=91dea4e835b50e7564e37eda049773dd

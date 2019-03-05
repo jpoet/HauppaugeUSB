@@ -75,7 +75,10 @@ inline int wrapMutexDestroy(wrapMutex_t *m) {
 }
 
 inline int wrapMutexLock(wrapMutex_t *m) {
-        return (pthread_mutex_lock(m) == 0) ? WRAPOS_OK : WRAPOS_ERROR;
+    struct timespec wait = {0,};
+    wait.tv_sec = 10;
+
+    return (pthread_mutex_timedlock(m, &wait) == 0) ? WRAPOS_OK : WRAPOS_ERROR;
 }
 
 inline int wrapMutexUnlock(wrapMutex_t *m) {
@@ -98,7 +101,7 @@ typedef void(*wrapThreadFunction_t)(void *pData);
 typedef void *wrapThread_t;
 
 int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func, void *pData,
-		    const char *name);
+                    const char *name);
 int wrapThreadStop(wrapThread_t *thread);
 
 inline void wrapThreadExit(int result) {

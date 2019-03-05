@@ -19,27 +19,29 @@
  */
 
 #include <unistd.h>
+#include <thread>
 
 #include "registryif.h"
 #include "audio_CX2081x.h"
 #include "device_EDID.h"
+#include "hauppauge2_EDID.h"
 //Common/Rx/audio_CS8416.h
 #include "audio_CS8416.h"
 
 #include "HauppaugeDev.h"
+#include "FlipInterlacedFields.h"
 #include "Logger.h"
 
 using namespace std;
 
 HauppaugeDev::HauppaugeDev(const Parameters & params)
-    : m_fd(-1),
-      m_rxDev(nullptr),
-      m_encDev(nullptr),
-      m_fx2(nullptr),
-      m_params(params),
-      m_video_initialized(-1),
-      m_err(false),
-      m_max_retry(30)
+    : m_fd(-1)
+    , m_rxDev(nullptr)
+    , m_encDev(nullptr)
+    , m_fx2(nullptr)
+    , m_params(params)
+    , m_video_initialized(-1)
+    , m_err(false)
 {
     configure();
 }
@@ -104,6 +106,7 @@ void HauppaugeDev::configure(void)
     RegistryAccess::writeDword("VideoLevel", m_params.videoH264Level);
 
     RegistryAccess::writeDword("AudioCapSource", m_params.audioInput);
+//    RegistryAccess::writeDword("AudioCapSPDIFInput", 3); // Default = 0
 
     RegistryAccess::writeDword("AudioCodecOutputFormat", m_params.audioCodec);
 //    RegistryAccess::writeDword("AudioCapMode", 5);
@@ -113,8 +116,7 @@ void HauppaugeDev::configure(void)
     RegistryAccess::writeDword("AudioCapSampleRate", m_params.audioSamplerate);
     RegistryAccess::writeDword("AudioOutputBitrate", m_params.audioBitrate);
 
-    // AudioCapSPDIFInput
-    // AudioCodecOutputFormat
+
     // AudioOutputMode
     // -
 }
@@ -136,17 +138,16 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3 ? ENCAIF_AC3
          : ENCAIF_AUTO);
 
-    audio_CS8416 audio_CS8416(*m_fx2);
-
     if (spdif)
     {
         // check that CS8416 part is installed and supported by this device
         try
         {
-            audio_CS8416.reset(audio_CS8416::AudioInput::OPTICAL);
-
             // init CS8416 optical receiver if detected
             // switch audio mux to SPDIF
+            audio_CS8416 audio_CS8416(*m_fx2);
+            audio_CS8416.reset(audio_CS8416::AudioInput::OPTICAL);
+
             m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
             LOG(Logger::NOTICE) << "Audio Input set to S/PDIF" << flush;
         }
@@ -165,11 +166,33 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         {
             case HAPI_AUDIO_CAPTURE_SOURCE_HDMI:
             {
-                audio_CS8416.reset(audio_CS8416::AudioInput::HDMI);
                 if (audioFormat == ENCAIF_AC3)
-                    m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
+                {
+                    try
+                    {
+                        audio_CS8416 audio_CS8416(*m_fx2);
+                        audio_CS8416.reset(audio_CS8416::AudioInput::HDMI);
+
+                        m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
+                        LOG(Logger::NOTICE) << "'SPDIF' from HDMI via 8416"
+                                            << flush;
+                    }
+                    catch (std::runtime_error &e)
+                    {
+                        LOG(Logger::WARNING) << "Can't initialize CS8416 part. "
+                            "AC3 codec will not be available" << flush;
+                        spdif = false;
+                    }
+                }
                 else
+                {
+#if 0               // Fred says this is wrong
                     m_fx2->setPortStateBits(FX2_PORT_E, 0, 0x18);
+#else
+                    m_fx2->setPortStateBits(FX2_PORT_E, 0x00, 0x00);
+#endif
+                    LOG(Logger::NOTICE) << "I2S audio from ADV7842" << flush;
+                }
                 LOG(Logger::NOTICE) << "Audio Input: HDMI" << flush;
                 break;
             }
@@ -199,6 +222,9 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
                         << (audioFormat == ENCAIF_AC3 ? "AC3" : "AUTO")
                         << flush;
 
+    if (interlaced)
+        FlipHDMIFields();
+
     if(!m_encDev->setInputFormat(source, audioFormat,
                                  width, height, interlaced,
                                  vFreq, aspectRatio, audioSampleRate))
@@ -226,19 +252,19 @@ bool HauppaugeDev::init_cvbs(void)
     if (m_video_initialized != HAPI_VIDEO_CAPTURE_SOURCE_CVBS)
     {
         m_rxDev->setInput(RXI_CVBS);
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         m_rxDev->showInfo();
         m_encDev->showInfo();
     }
 
     int idx;
-    for (idx = 0; idx < m_max_retry; ++idx)
+    for (idx = 0; idx < MAX_RETRY; ++idx)
     {
         if (m_rxDev->hasInputSignal())
             break;
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    if (idx == m_max_retry)
+    if (idx == MAX_RETRY)
     {
         m_errmsg = "No input signal.";
         LOG(Logger::CRIT) << m_errmsg << flush;
@@ -246,16 +272,16 @@ bool HauppaugeDev::init_cvbs(void)
     }
 
     receiverOutputParams_t vp;
-    for (idx = 0; idx < m_max_retry; ++idx)
+    for (idx = 0; idx < MAX_RETRY; ++idx)
     {
         // getOutputParams can return garbage
         if (m_rxDev->getOutputParams(&vp) &&
             valid_resolution(vp.width, vp.height))
             break;
         LOG(Logger::NOTICE) << "Invalid Output Params, retrying." << flush;
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    if (idx == m_max_retry)
+    if (idx == MAX_RETRY)
     {
         m_errmsg = "Cannot determine video mode.";
         LOG(Logger::CRIT) << m_errmsg << flush;
@@ -289,19 +315,19 @@ bool HauppaugeDev::init_component(void)
     if (m_video_initialized != HAPI_VIDEO_CAPTURE_SOURCE_COMPONENT)
     {
         m_rxDev->setInput(RXI_COMP);
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         m_rxDev->showInfo();
         m_encDev->showInfo();
     }
 
     int idx;
-    for (idx = 0; idx < m_max_retry; ++idx)
+    for (idx = 0; idx < MAX_RETRY; ++idx)
     {
         if (m_rxDev->hasInputSignal())
             break;
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    if (idx == m_max_retry)
+    if (idx == MAX_RETRY)
     {
         m_errmsg = "No input signal.";
         LOG(Logger::CRIT) << m_errmsg << flush;
@@ -309,16 +335,16 @@ bool HauppaugeDev::init_component(void)
     }
 
     receiverOutputParams_t vp;
-    for (idx = 0; idx < m_max_retry; ++idx)
+    for (idx = 0; idx < MAX_RETRY; ++idx)
     {
         // getOutputParams can return garbage
         if (m_rxDev->getOutputParams(&vp) &&
             valid_resolution(vp.width, vp.height))
             break;
         LOG(Logger::NOTICE) << "Invalid Output Params, retrying." << flush;
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    if (idx == m_max_retry)
+    if (idx == MAX_RETRY)
     {
         m_errmsg = "Cannot determine video mode.";
         LOG(Logger::CRIT) << m_errmsg << flush;
@@ -362,19 +388,19 @@ bool HauppaugeDev::init_hdmi(void)
     if (m_video_initialized != HAPI_VIDEO_CAPTURE_SOURCE_HDMI)
     {
         m_rxDev->setInput(RXI_HDMI);
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         m_rxDev->showInfo();
         m_encDev->showInfo();
     }
 
     int idx;
-    for (idx = 0; idx < m_max_retry; ++idx)
+    for (idx = 0; idx < MAX_RETRY; ++idx)
     {
         if (m_rxDev->hasInputSignal())
             break;
-        usleep(500000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    if (idx == m_max_retry)
+    if (idx == MAX_RETRY)
     {
         m_errmsg = "No input signal.";
         LOG(Logger::CRIT) << m_errmsg << flush;
@@ -389,16 +415,16 @@ bool HauppaugeDev::init_hdmi(void)
     if (vic <= 0 || !m_encDev->setHDMIFormat(vic, ap.sampleRate))
     {
         receiverHDMIParams_t vp;
-        for (idx = 0; idx < m_max_retry; ++idx)
+        for (idx = 0; idx < MAX_RETRY; ++idx)
         {
             // getHDMIParams can return garbage
             if (m_rxDev->getHDMIParams(&vp) &&
                 valid_resolution(vp.width, vp.height))
                 break;
             LOG(Logger::NOTICE) << "Invalid Output Params, retrying." << flush;
-            usleep(500000);
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
-        if (idx == m_max_retry)
+        if (idx == MAX_RETRY)
         {
             m_errmsg = "Cannot determine video mode.";
             LOG(Logger::CRIT) << m_errmsg << flush;
@@ -427,6 +453,7 @@ bool HauppaugeDev::init_hdmi(void)
             default:
               m_rxDev->setOutputBusMode(RXOBM_422_10x2);
         }
+
     }
 
 #if 0
@@ -472,7 +499,7 @@ void HauppaugeDev::log_ports(void)
                       << dec << flush;
 }
 
-bool HauppaugeDev::Open(USBWrapper_t & usbio,
+bool HauppaugeDev::Open(USBWrapper_t & usbio, bool ac3,
                         DataTransfer::callback_t * cb)
 {
     LOG(Logger::NOTICE) << "Opening Hauppauge USB device." << flush;
@@ -486,15 +513,18 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio,
 
     m_fx2 = new FX2Device_t(usbio);
 
-    for (int idx = 0; !m_fx2->isUSBHighSpeed() && idx < m_max_retry; ++idx)
+    int idx =0;
+    for ( ; !m_fx2->isUSBHighSpeed() && idx < MAX_RETRY; ++idx)
     {
         m_fx2->stopCPU();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         m_fx2->loadFirmware();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         m_fx2->startCPU();
-        usleep(1000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    LOG(Logger::NOTICE) << "FX2 ready" << flush;
+    LOG(Logger::NOTICE) << "FX2 ready after " << idx << " tries." << flush;
     log_ports();
 
     // reset CS5340, it will be set back by m_encDev->init()
@@ -513,11 +543,38 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio,
                        << "\nPORT_E: 0x" << m_fx2->getPortState(FX2_PORT_E)
                        << dec
                        << flush;
-    usleep(100);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     LOG(Logger::NOTICE) << "encDev ready" << flush;
 
     m_rxDev = new receiver_ADV7842_t(*m_fx2);
-    m_rxDev->setEDID(EDID_default, sizeof(EDID_default), EDID_default_SPAloc);
+    if (ac3)
+    {
+#if 1
+        m_rxDev->setEDID(edidHDPVR2_1080p6050_ac3_fix_rgb,
+                         sizeof(edidHDPVR2_1080p6050_ac3_fix_rgb),
+                         edidHDPVR2_1080p6050_ac3_fix_rgbSpaLoc);
+        LOG(Logger::NOTICE) << "Using 1080p6050 w/AC3 EDID." << flush;
+#else
+        m_rxDev->setEDID(edidHDPVR2_1080p6050_atmos,
+                         sizeof(edidHDPVR2_1080p6050_ac3_fix_rgb),
+                         edidHDPVR2_1080p6050_atmos_SPAloc);
+        LOG(Logger::NOTICE) << "Using 1080p6050 w/Atmos EDID." << flush;
+#endif
+    }
+    else
+    {
+#if 0
+        // Original EDID
+        m_rxDev->setEDID(EDID_default, sizeof(EDID_default), EDID_default_SPAloc);
+        LOG(Logger::NOTICE) << "Using 1080p6050 stereo EDID." << flush;
+#else
+        // Updated EDID from Hauppauge
+        m_rxDev->setEDID(edidHDPVR2_1080p6050_pcm_fix_rgb,
+                         sizeof(edidHDPVR2_1080p6050_pcm_fix_rgb),
+                         edidHDPVR2_1080p6050_pcm_fix_rgbSpaLoc);
+        LOG(Logger::NOTICE) << "Using 1080p6050 stereo RGB EDID." << flush;
+#endif
+    }
     m_rxDev->init();
     LOG(Logger::NOTICE) << "rxDev ready" << flush;
 
@@ -594,7 +651,7 @@ bool HauppaugeDev::StopEncoding(void)
     if(!m_encDev->stopCapture())
     {
         m_errmsg = "Encoder stop capture failed.";
-        LOG(Logger::ERR) << m_errmsg << flush;
+        LOG(Logger::WARNING) << m_errmsg << flush;
         return false;
     }
     log_ports();

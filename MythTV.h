@@ -31,6 +31,7 @@
 #include <queue>
 #include <condition_variable>
 #include <thread>
+#include <mutex>
 
 class MythTV;
 
@@ -63,9 +64,9 @@ class Buffer
 
   private:
     std::thread m_thread;
+    MythTV     *m_parent;
     std::atomic_bool m_run;
 
-    MythTV* m_parent;
     DataTransfer::callback_t m_cb;
 
     uint32_t m_block_size;
@@ -81,7 +82,9 @@ class Buffer
 class Commands
 {
   public:
-    Commands(MythTV * parent) : m_thread(), m_parent(parent) {;}
+    enum { max_api_version = 2 };
+
+    Commands(MythTV * parent);
     ~Commands(void) {
         m_run = false;
         if(m_thread.joinable()) m_thread.join();
@@ -94,7 +97,8 @@ class Commands
             m_thread.join();
     }
 
-    bool send_status(const std::string & cmd, const std::string & status);
+    bool send_status(const std::string & cmd, const std::string & serial,
+                     const std::string & status);
     bool process_command(const std::string & cmd);
 
   protected:
@@ -105,6 +109,7 @@ class Commands
     std::atomic_bool m_run;
 
     MythTV* m_parent;
+    int     m_api_version;
 };
 
 class MythTV
@@ -113,7 +118,7 @@ class MythTV
     friend class Commands;
 
   public:
-    MythTV(const Parameters & params);
+    MythTV(const Parameters & params, const std::string & desc);
     ~MythTV(void);
 
     void Terminate(void);
@@ -125,11 +130,17 @@ class MythTV
 
     DataTransfer::callback_t & getWriteCallBack(void)
       { return m_buffer.getWriteCallBack(); }
+    USBWrapper_t::callback_t & getErrorCallBack(void)
+      { return m_error_cb; }
 
-    bool StartEncoding(void);
-    bool StopEncoding(bool soft = false);
+    bool StartEncoding(std::string & resultmsg);
+    bool StopEncoding(std::string & resultmsg, bool soft = false);
+
+    void USBError(void) { Fatal("Detected Error with USB."); }
 
   protected:
+    std::string  m_desc;
+
     uint32_t     m_buffer_max;
     uint32_t     m_block_size;
 
@@ -146,11 +157,13 @@ class MythTV
     std::string  m_fatal_msg;
     bool         m_fatal;
 
-    std::mutex        m_flow_mutex;
+    std::timed_mutex        m_flow_mutex;
     std::condition_variable m_flow_cond;
     std::atomic<bool> m_streaming;
     std::atomic<bool> m_xon;
     std::atomic<bool> m_ready;
+
+    USBWrapper_t::callback_t m_error_cb;
 };
 
 #endif

@@ -29,8 +29,10 @@
 #include "HauppaugeDev.h"
 #include "MythTV.h"
 
+#include <chrono>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 
 #include <unistd.h>
 #include <signal.h>
@@ -40,6 +42,7 @@
 
 #include "types_local.h"
 
+using namespace std;
 namespace po = boost::program_options;
 
 void InitInterruptHandler(void)
@@ -50,19 +53,21 @@ void InitInterruptHandler(void)
     pthread_sigmask(SIG_BLOCK, &ss, NULL);
 }
 
-static int evtWait() {
-        sigset_t ss;
-        sigemptyset(&ss);
-        sigaddset(&ss, SIGINT);
-        int s;
-        if(sigwait(&ss, &s) != 0) return 0;
-        return s;
+static int evtWait()
+{
+    sigset_t ss;
+    sigemptyset(&ss);
+    sigaddset(&ss, SIGINT);
+    int s;
+    if (sigwait(&ss, &s) != 0)
+        return 0;
+    return s;
 }
 
 bool ListDevs(void)
 {
     USBWrapper_t usbio;
-    DeviceIDVec devs;
+    DeviceIDVec  devs;
     DeviceIDVec::iterator Idev;
 
     if (!usbio.DeviceList(devs))
@@ -100,7 +105,7 @@ bool ListDevs(void)
 bool FindDev(const string & serial, int & bus, int & port)
 {
     USBWrapper_t usbio;
-    DeviceIDVec devs;
+    DeviceIDVec  devs;
     DeviceIDVec::iterator Idev;
 
     if (!usbio.DeviceList(devs))
@@ -113,12 +118,44 @@ bool FindDev(const string & serial, int & bus, int & port)
     {
         if (get<2>(*Idev) == serial)
         {
-            bus = static_cast<int>(get<4>(*Idev));
+            bus  = static_cast<int>(get<4>(*Idev));
             port = static_cast<int>(get<5>(*Idev));
             return true;
         }
     }
     return false;
+}
+
+void PrintPosition(const chrono::seconds & elapsed,
+                   const chrono::seconds & duration)
+{
+    auto t = elapsed;
+    auto h =  chrono::duration_cast<std::chrono::hours>(t);
+    t -= h;
+    auto m =  chrono::duration_cast<std::chrono::minutes>(t);
+    t -= m;
+    auto s =  chrono::duration_cast<std::chrono::seconds>(t);
+#if 0
+    t -= s;
+    auto ms = chrono::duration_cast<std::chrono::milliseconds>(t); t -= ms;
+    auto us = chrono::duration_cast<std::chrono::microseconds>(t); t -= us;
+    auto ns = chrono::duration_cast<std::chrono::nanoseconds>(t);
+#endif
+    cerr.fill('0');
+    cerr << setw(3) << h.count() << ":" << setw(2) << m.count() << ":"
+         << setw(2) << s.count();
+    cerr << " of ";
+
+    t = duration;
+    h =  chrono::duration_cast<std::chrono::hours>(t);
+    t -= h;
+    m =  chrono::duration_cast<std::chrono::minutes>(t);
+    t -= m;
+    s =  chrono::duration_cast<std::chrono::seconds>(t);
+
+    cerr << setw(3) << h.count() << ":" << setw(2) << m.count() << ":"
+         << setw(2) << s.count();
+    cerr << "\r";
 }
 
 int main(int argc, char *argv[])
@@ -188,6 +225,10 @@ int main(int argc, char *argv[])
         ("output,o", po::value<string>(), "Output destination")
         ("mythtv", po::value<bool>()->implicit_value(true),
          "Operate in MythTV External Recorder mode")
+        ("inputid", po::value<int>()->implicit_value(0),
+         "Input Id (informational, set by MythTV)")
+        ("duration", po::value<int>()->default_value(0),
+         "Stop recording after duration")
 
         // Logging
         ("logpath", po::value<string>(),
@@ -208,7 +249,9 @@ int main(int argc, char *argv[])
         ("override-loglevel", po::value<string>()->default_value("notice"),
          "Overrides the command-line logging level.  All log messages at lower "
          "levels will be discarded. In descending order: emerg, alert, crit, "
-         "err, warning, notice, info, debug");
+         "err, warning, notice, info, debug")
+        ("description", po::value<string>(),
+         "Set the description used in the MythTV log files.");
 
     Logger::setThreadName("main");
 
@@ -276,6 +319,7 @@ int main(int argc, char *argv[])
         Logger::Get()->setFilter(vm["override-loglevel"].as<string>());
     else if (vm.count("loglevel"))
         Logger::Get()->setFilter(vm["loglevel"].as<string>());
+
 
     if (vm.count("logpath") && vm.count("quiet") < 2)
     {
@@ -354,7 +398,9 @@ int main(int argc, char *argv[])
     {
         if (params.mythtv)
         {
-            MythTV mythtv(params);
+            string desc = vm.count("description") ?
+                          vm["description"].as<string>() : params.serial;
+            MythTV mythtv(params, desc);
             mythtv.Wait();
         }
         else
@@ -369,16 +415,40 @@ int main(int argc, char *argv[])
             if (!usbio.Open(params.serial))
                 return -3;
 
-            if (!dev.Open(usbio))
+            if (!dev.Open(usbio, (params.audioCodec == HAPI_AUDIO_CODEC_AC3)))
             {
                 usbio.Close();
                 return -4;
             }
 
-            if (dev.StartEncoding())
+            if (vm.count("duration") && vm["duration"].as<int>() > 0)
             {
-                evtWait();
-                dev.StopEncoding();
+                if (dev.StartEncoding())
+                {
+                    chrono::steady_clock::time_point start =
+                        chrono::steady_clock::now();
+                    std::chrono::seconds elapsed = chrono::seconds(0);
+                    std::chrono::seconds duration =
+                        chrono::seconds(vm["duration"].as<int>());
+                    do
+                    {
+                        elapsed = chrono::duration_cast<chrono::seconds>
+                                   (chrono::steady_clock::now() - start);
+                        PrintPosition(elapsed, duration);
+                        std::this_thread::sleep_for(std::chrono::seconds(1));
+                    }
+                    while (elapsed.count() < duration.count());
+                    cerr << "\n\n";
+                    dev.StopEncoding();
+                }
+            }
+            else
+            {
+                if (dev.StartEncoding())
+                {
+                    evtWait();
+                    dev.StopEncoding();
+                }
             }
 
             dev.Close();

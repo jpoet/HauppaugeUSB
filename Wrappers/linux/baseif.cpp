@@ -133,7 +133,8 @@ static void *_wrapThreadFunc(void *info) {
         return NULL;
 }
 
-int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func, void *pData, const char *name)
+int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func,
+		    void *pData, const char *name)
 {
         wrapThreadInfo_t *info = (wrapThreadInfo_t*)wrapHeapAlloc(sizeof(wrapThreadInfo_t));
         info->function = func;

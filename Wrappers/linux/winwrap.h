@@ -2,11 +2,14 @@
 #define __WINWRAP_H_
 
 #include <stdint.h>
+#include "wrapper.h"
 
 #define VOID void
+#undef BOOL
 #define BOOL bool
 #define BOOLEAN bool
 #define BYTE uint8_t
+#undef CHAR
 #define CHAR char
 #define WCHAR int16_t
 #define SHORT int16_t
