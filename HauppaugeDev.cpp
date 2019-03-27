@@ -222,7 +222,39 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
                         << (audioFormat == ENCAIF_AC3 ? "AC3" : "AUTO")
                         << flush;
 
-    if (interlaced)
+    if (m_params.videoCodingMode >= HAPI_CODING_MODE_FIELD &&
+        m_params.videoCodingMode <= HAPI_CODING_MODE_PAFF)
+    {
+        string desc;
+        switch (m_params.videoCodingMode)
+        {
+            case HAPI_CODING_MODE_FRAME:
+              desc = "Frame";
+              break;
+            case HAPI_CODING_MODE_FIELD:
+              desc = "Field";
+
+              break;
+            case HAPI_CODING_MODE_MBAFF:
+              desc = "MBAFF";
+              break;
+            case HAPI_CODING_MODE_PAFF:
+              desc = "PAFF";
+              break;
+            default:
+              desc = "Unknown";
+        }
+
+        if (interlaced)
+        {
+            LOG(Logger::NOTICE) << "Setting video coding mode to " << desc << flush;
+            RegistryAccess::writeDword("VideoCodingMode", m_params.videoCodingMode);
+        }
+        else
+            LOG(Logger::NOTICE) << "Progressive video, ignoring requested video coding mode " << desc << flush;
+    }
+
+    if (interlaced && m_params.flipFields)
         FlipHDMIFields();
 
     if(!m_encDev->setInputFormat(source, audioFormat,

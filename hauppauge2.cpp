@@ -45,6 +45,8 @@
 using namespace std;
 namespace po = boost::program_options;
 
+const string VERSION = "0.6";
+
 void InitInterruptHandler(void)
 {
     sigset_t ss;
@@ -165,6 +167,7 @@ int main(int argc, char *argv[])
 
     po::options_description cmd_line("Hauppauge libusb based device recorder");
     cmd_line.add_options()
+        ("version", "Display the version number")
         ("help,h", "Produce this help message.")
         ("config,c", po::value<std::string>(), "Config file")
         ("list,l", "List detected devices.");
@@ -208,6 +211,10 @@ int main(int argc, char *argv[])
          "Maximum VBR bitrate")
         ("tsbitrate,t", po::value<int>()->default_value(20000000),
          "Transport Stream bitrate")
+        ("videocodingmode,X", po::value<int>()->default_value(4),
+         "Video encoding mode (0=FRAME, 1=FIELD, 2=MBAFF, 3=PAFF, 4=AUTO)")
+        ("flipfields,F", po::value<bool>()->implicit_value(true),
+         "Flip interlaced fields. Usually desireable, but MBAFF may look better with this off.")
         ("profile,p", po::value<int>()->default_value(4), "H.264 profile "
          "(0=Constrained baseline, 3=Main, 4=High)")
         ("level,L", po::value<int>()->default_value(420),
@@ -303,6 +310,14 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    params.version = VERSION;
+
+    if (vm.count("version"))
+    {
+        cout << "Version " << params.version << endl;
+        return 0;
+    }
+
     params.verbose = vm.count("verbose");
 
     if (vm.count("list"))
@@ -375,6 +390,11 @@ int main(int argc, char *argv[])
         params.videoVBRMin = vm["minvbrrate"].as<int>();
     if (vm.count("maxvbrrate"))
         params.videoVBRMax = vm["maxvbrrate"].as<int>();
+    if (vm.count("videocodingmode"))
+        params.videoCodingMode = static_cast<_HAPI_CODING_MODE>
+                                 (vm["videocodingmode"].as<int>());
+    if (vm.count("flipfields"))
+        params.flipFields = vm["flipfields"].as<bool>();
     if (vm.count("profile"))
         params.videoProfile = static_cast<_HAPI_VIDEO_PROFILE>
                                (vm["profile"].as<int>());

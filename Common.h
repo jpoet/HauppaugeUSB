@@ -29,6 +29,7 @@
 
 struct Parameters
 {
+    std::string version;
     int    verbose;
     bool   audioBoost;
     int    tsBitrate;
@@ -40,10 +41,12 @@ struct Parameters
     std::string serial;
     std::string output;
     bool   mythtv;
+    bool   flipFields;
 
     _HAPI_VIDEO_CAPTURE_SOURCE videoInput;
     _HAPI_AUDIO_CAPTURE_SOURCE audioInput;
     _HAPI_RATE_CONTROL     videoRateControl;
+    _HAPI_CODING_MODE      videoCodingMode;
     _HAPI_VIDEO_PROFILE    videoProfile;
     _HAPI_VIDEO_H264_LEVEL videoH264Level;
     _HAPI_LATENCY          videoLatency;

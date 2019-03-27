@@ -27,8 +27,6 @@
 using namespace std;
 using namespace boost::algorithm;
 
-const string VERSION = "0.5";
-
 MythTV::MythTV(const Parameters & params, const string & desc)
     : m_desc(desc)
     , m_buffer_max(188 * 100000)
@@ -296,7 +294,7 @@ bool Commands::process_command(const string & cmd)
         if (m_parent->m_fatal)
             send_status(cmd, serial, "ERR:" + m_parent->m_fatal_msg);
         else
-            send_status(cmd, serial, "OK:" + VERSION);
+            send_status(cmd, serial, "OK:" + m_parent->m_params.version);
         return true;
     }
     if (starts_with(tokens[0], "Description?"))
