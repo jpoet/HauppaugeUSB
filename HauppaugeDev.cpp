@@ -121,6 +121,29 @@ void HauppaugeDev::configure(void)
     // -
 }
 
+bool HauppaugeDev::set_digital_audio(bool optical)
+{
+    try
+    {
+        // init CS8416 optical receiver if detected
+        audio_CS8416 audio_CS8416(*m_fx2);
+        if (optical)
+            audio_CS8416.reset(audio_CS8416::AudioInput::OPTICAL);
+        else
+            audio_CS8416.reset(audio_CS8416::AudioInput::HDMI);
+
+        LOG(Logger::NOTICE) << "CS8416 initialized." << flush;
+    }
+    catch (std::runtime_error &e)
+    {
+        LOG(Logger::WARNING) << "This device does not have a CS8416. "
+                             << "AC3 not available." << flush;
+        return false;
+    }
+
+    return true;
+}
+
 bool HauppaugeDev::set_input_format(encoderSource_t source,
                                     unsigned width, unsigned height,
                                     bool interlaced, float vFreq,
@@ -140,24 +163,17 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
 
     if (spdif)
     {
-        // check that CS8416 part is installed and supported by this device
-        try
+        if (set_digital_audio(true))
         {
-            // init CS8416 optical receiver if detected
-            // switch audio mux to SPDIF
-            audio_CS8416 audio_CS8416(*m_fx2);
-            audio_CS8416.reset(audio_CS8416::AudioInput::OPTICAL);
-
             m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
-            LOG(Logger::NOTICE) << "Audio Input set to S/PDIF" << flush;
+            LOG(Logger::INFO) << "Audio Input: S/PDIF" << flush;
         }
-        catch (std::runtime_error &e)
+        else
         {
             LOG(Logger::WARNING) << "Can't initialize CS8416 part. "
-                "S/PDIF input won't be available" << flush;
+                "S/PDIF input is not available" << flush;
             spdif = false;
         }
-        LOG(Logger::INFO) << "Audio Input: S/PDIF" << flush;
     }
 
     if (!spdif)
@@ -166,23 +182,11 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         {
             case HAPI_AUDIO_CAPTURE_SOURCE_HDMI:
             {
-                if (audioFormat == ENCAIF_AC3)
+                if (set_digital_audio(false) && audioFormat == ENCAIF_AC3)
                 {
-                    try
-                    {
-                        audio_CS8416 audio_CS8416(*m_fx2);
-                        audio_CS8416.reset(audio_CS8416::AudioInput::HDMI);
-
-                        m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
-                        LOG(Logger::NOTICE) << "'SPDIF' from HDMI via 8416"
-                                            << flush;
-                    }
-                    catch (std::runtime_error &e)
-                    {
-                        LOG(Logger::WARNING) << "Can't initialize CS8416 part. "
-                            "AC3 codec will not be available" << flush;
-                        spdif = false;
-                    }
+                    m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
+                    LOG(Logger::NOTICE) << "'SPDIF' from HDMI via 8416"
+                                        << flush;
                 }
                 else
                 {
