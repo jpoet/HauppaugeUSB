@@ -1,7 +1,7 @@
 
 ## Override path set by Hauppauge's make files, to use our 'wrappers'
 
-override TOP := ./Hauppauge
+override TOP := ./hauppauge_hdpvr2
 
 override VPATH = ${TOP} $(TOP)/Common/Rx $(TOP)/Common/Rx/ADV7842	\
 $(TOP)/Common/Rx/ADV7842/RX/LIB $(TOP)/Common/Rx/ADV7842/RX/HAL	\
@@ -28,7 +28,7 @@ override OS_INC := `pkg-config --cflags libusb-1.0`
 
 # override CXXFLAGS := -g -c -Wall -std=c++11 ${CFLAGS}
 
-include ./Hauppauge/TestApp/build-ADV7842/Makefile
+include ./hauppauge_hdpvr2/TestApp/build-ADV7842/Makefile
 
 REC_CXX = g++
 REC_CXXFLAGS := -g -c -Wall -std=c++11 -fdiagnostics-color -DBOOST_LOG_DYN_LINK ${CFLAGS}
@@ -44,7 +44,7 @@ REC_HEADERS = Logger.h Common.h MythTV.h FlipInterlacedFields.h HauppaugeDev.h
 REC_OBJECTS = $(REC_SOURCES:.cpp=.o)
 
 CONF = etc/sample.conf
-FIRMWARE = Hauppauge/Common/EncoderDev/HAPIHost/bin/llama_usb_vx_host_slave_t22_24.bin Hauppauge/Common/EncoderDev/HAPIHost/bin/mips_vx_host_slave.bin
+FIRMWARE = hauppauge_hdpvr2/Common/EncoderDev/HAPIHost/bin/llama_usb_vx_host_slave_t22_24.bin hauppauge_hdpvr2/Common/EncoderDev/HAPIHost/bin/mips_vx_host_slave.bin
 TRANSIENT = FX2Firmware.cpp mchip_binary.cpp
 REC_EXE  = hauppauge2
 REC_LIBS = libADV7842.a
@@ -53,7 +53,7 @@ REC_LIBS += -lboost_program_options -lboost_log -lboost_log_setup -lboost_system
 all: ${REC_EXE}
 
 ${REC_EXE}: ${REC_OBJECTS} ${REC_LIBS}
-	${REC_CXX} ${REC_OBJECTS} -o $@ ${REC_LIBS} ${REC_LDFLAGS} 
+	${REC_CXX} ${REC_OBJECTS} -o $@ ${REC_LIBS} ${REC_LDFLAGS}
 
 ${REC_OBJECTS}: ${REC_SOURCES}
 
@@ -71,6 +71,6 @@ clean:
 	$(RM) *.o *.a ${REC_EXE} ${TRANSIENT}
 
 install:
-	install -D --target-directory /opt/Hauppauge/bin ${REC_EXE}
-	install -D --target-directory /opt/Hauppauge/firmware ${FIRMWARE}
-	install -D --target-directory /opt/Hauppauge/etc ${CONF}
+	install -D --target-directory /usr/sbin ${REC_EXE}
+	install -D --target-directory /lib/firmware/Hauppauge ${FIRMWARE}
+	install -D --target-directory /etc/Hauppauge ${CONF}

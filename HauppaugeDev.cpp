@@ -93,7 +93,7 @@ void HauppaugeDev::configure(void)
     RegistryAccess::writeDword("VideoOutputBitrate", m_params.videoBitrate);
     RegistryAccess::writeDword("VBRMin", m_params.videoVBRMin);
     RegistryAccess::writeDword("VBRMax", m_params.videoVBRMax);
-
+    RegistryAccess::writeDword("VideoCodingMode", m_params.videoCodingMode);
     RegistryAccess::writeDword("VideoProfile", m_params.videoProfile);
     RegistryAccess::writeDword("Profile", m_params.videoProfile);
 
@@ -336,6 +336,9 @@ bool HauppaugeDev::init_cvbs(void)
         return false;
 
     m_rxDev->setOutputBusMode(RXOBM_656_10);
+
+    audio_CX2081x audio_CX2081x(*m_fx2);
+    audio_CX2081x.init();
 
     LOG(Logger::NOTICE) << "Composite video input initialized." << flush;
 

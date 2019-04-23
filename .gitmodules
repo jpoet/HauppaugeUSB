@@ -1,0 +1,3 @@
+[submodule "hauppauge_hdpvr2"]
+	path = hauppauge_hdpvr2
+	url = https://github.com/snaptv/hauppauge_hdpvr2.git

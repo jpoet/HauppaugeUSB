@@ -205,6 +205,8 @@ int main(int argc, char *argv[])
          "Video bitrate")
         ("videoratecontrol,C", po::value<int>()->default_value(1),
          "Video rate type (0=CBR, 1=VBR, 2=CAPPED_VBR)")
+        ("videocodingmode,X", po::value<int>()->default_value(1),
+         "Video coding mode type (0=Frame, 1=Field, 2=MBAFF, 3=PAFF)")
         ("minvbrrate,m", po::value<int>()->default_value(9000000),
          "Mininum VBR bitrate")
         ("maxvbrrate,M", po::value<int>()->default_value(20000000),
@@ -386,6 +388,9 @@ int main(int argc, char *argv[])
     if (vm.count("videoratecontrol"))
         params.videoRateControl = static_cast<_HAPI_RATE_CONTROL>
                                     (vm["videoratecontrol"].as<int>());
+    if (vm.count("videocodingmode"))
+        params.videoCodingMode = static_cast<_HAPI_CODING_MODE>
+                                    (vm["videocodingmode"].as<int>());
     if (vm.count("minvbrrate"))
         params.videoVBRMin = vm["minvbrrate"].as<int>();
     if (vm.count("maxvbrrate"))
