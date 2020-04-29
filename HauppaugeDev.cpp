@@ -144,22 +144,9 @@ bool HauppaugeDev::set_digital_audio(bool optical)
     return true;
 }
 
-bool HauppaugeDev::set_input_format(encoderSource_t source,
-                                    unsigned width, unsigned height,
-                                    bool interlaced, float vFreq,
-                                    float aspectRatio, float audioSampleRate)
+bool HauppaugeDev::set_audio_format(encoderAudioInFormat_t audioFormat)
 {
-    LOG(Logger::NOTICE) << "Input width: " << width
-                        << " height: " << height
-                        << " interlaced: " << interlaced
-                        << " vFreq: " << vFreq
-                        << " audio SR: " << audioSampleRate
-                        << flush;
-
     bool spdif = (m_params.audioInput == HAPI_AUDIO_CAPTURE_SOURCE_SPDIF);
-    encoderAudioInFormat_t audioFormat =
-        (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3 ? ENCAIF_AC3
-         : ENCAIF_AUTO);
 
     if (spdif)
     {
@@ -226,6 +213,27 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
                         << (audioFormat == ENCAIF_AC3 ? "AC3" : "AUTO")
                         << flush;
 
+    return true;
+}
+
+bool HauppaugeDev::set_input_format(encoderSource_t source,
+                                    unsigned width, unsigned height,
+                                    bool interlaced, float vFreq,
+                                    float aspectRatio, float audioSampleRate)
+{
+    LOG(Logger::NOTICE) << "Input width: " << width
+                        << " height: " << height
+                        << " interlaced: " << interlaced
+                        << " vFreq: " << vFreq
+                        << " audio SR: " << audioSampleRate
+                        << flush;
+
+    encoderAudioInFormat_t audioFormat =
+        (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3 ? ENCAIF_AC3
+         : ENCAIF_AUTO);
+
+    set_audio_format(audioFormat);
+
     if (m_params.videoCodingMode >= HAPI_CODING_MODE_FIELD &&
         m_params.videoCodingMode <= HAPI_CODING_MODE_PAFF)
     {
@@ -257,6 +265,8 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
         else
             LOG(Logger::NOTICE) << "Progressive video, ignoring requested video coding mode " << desc << flush;
     }
+    else
+        LOG(Logger::INFO) << "Progressive video" << flush;
 
     if (interlaced && m_params.flipFields)
         FlipHDMIFields();
