@@ -384,7 +384,8 @@ bool HauppaugeDev::init_component(void)
         if (m_rxDev->getOutputParams(&vp) &&
             valid_resolution(vp.width, vp.height))
             break;
-        LOG(Logger::NOTICE) << "Invalid Output Params, retrying." << flush;
+        LOG(Logger::NOTICE) << "Invalid Output Params (" << vp.width << "x" << vp.height
+                            << "), retrying." << flush;
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     if (idx == MAX_RETRY)
@@ -512,7 +513,10 @@ bool HauppaugeDev::init_hdmi(void)
 
 bool HauppaugeDev::open_file(const string & file_name)
 {
-    m_fd = open(file_name.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0666);
+    if (file_name == "stdout")
+        m_fd = 1;
+    else
+        m_fd = open(file_name.c_str(), O_WRONLY | O_TRUNC | O_CREAT, 0666);
 
     if (m_fd < 0)
     {

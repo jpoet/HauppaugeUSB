@@ -301,7 +301,9 @@ int main(int argc, char *argv[])
 
     notify(vm);
 
+#if 0
     InitInterruptHandler();
+#endif
 
     // Display help text when requested
     if (vm.count("help"))
@@ -412,67 +414,67 @@ int main(int argc, char *argv[])
     if (vm.count("aspect"))
         params.aspectRatio = vm["aspect"].as<float>();
 
-    params.mythtv = (vm.count("mythtv"));
+    params.mythtv = (vm.count("mythtv")) ? vm["mythtv"].as<bool>() : false;
 
-    if (vm.count("output") || params.mythtv)
+    if (vm.count("output"))
+        params.output = vm["output"].as<string>();
+    else
+        params.output = "stdout";
+
+    if (params.mythtv)
     {
-        if (params.mythtv)
+        string desc = vm.count("description") ?
+                      vm["description"].as<string>() : params.serial;
+        MythTV mythtv(params, desc);
+        mythtv.Wait();
+    }
+    else
+    {
+        HauppaugeDev dev(params);
+        if (!dev)
+            return -2;
+
+        USBWrapper_t usbio;
+        if (!usbio.Open(params.serial))
+            return -3;
+
+        if (!dev.Open(usbio, (params.audioCodec == HAPI_AUDIO_CODEC_AC3)))
         {
-            string desc = vm.count("description") ?
-                          vm["description"].as<string>() : params.serial;
-            MythTV mythtv(params, desc);
-            mythtv.Wait();
+            usbio.Close();
+            return -4;
+        }
+
+        if (vm.count("duration") && vm["duration"].as<int>() > 0)
+        {
+            if (dev.StartEncoding())
+            {
+                chrono::steady_clock::time_point start =
+                    chrono::steady_clock::now();
+                std::chrono::seconds elapsed = chrono::seconds(0);
+                std::chrono::seconds duration =
+                    chrono::seconds(vm["duration"].as<int>());
+                do
+                {
+                    elapsed = chrono::duration_cast<chrono::seconds>
+                              (chrono::steady_clock::now() - start);
+                    PrintPosition(elapsed, duration);
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                }
+                while (elapsed.count() < duration.count());
+                cerr << "\n\n";
+                dev.StopEncoding();
+            }
         }
         else
         {
-            params.output = vm["output"].as<string>();
-
-            HauppaugeDev dev(params);
-            if (!dev)
-                return -2;
-
-            USBWrapper_t usbio;
-            if (!usbio.Open(params.serial))
-                return -3;
-
-            if (!dev.Open(usbio, (params.audioCodec == HAPI_AUDIO_CODEC_AC3)))
+            if (dev.StartEncoding())
             {
-                usbio.Close();
-                return -4;
+                evtWait();
+                dev.StopEncoding();
             }
-
-            if (vm.count("duration") && vm["duration"].as<int>() > 0)
-            {
-                if (dev.StartEncoding())
-                {
-                    chrono::steady_clock::time_point start =
-                        chrono::steady_clock::now();
-                    std::chrono::seconds elapsed = chrono::seconds(0);
-                    std::chrono::seconds duration =
-                        chrono::seconds(vm["duration"].as<int>());
-                    do
-                    {
-                        elapsed = chrono::duration_cast<chrono::seconds>
-                                   (chrono::steady_clock::now() - start);
-                        PrintPosition(elapsed, duration);
-                        std::this_thread::sleep_for(std::chrono::seconds(1));
-                    }
-                    while (elapsed.count() < duration.count());
-                    cerr << "\n\n";
-                    dev.StopEncoding();
-                }
-            }
-            else
-            {
-                if (dev.StartEncoding())
-                {
-                    evtWait();
-                    dev.StopEncoding();
-                }
-            }
-
-            dev.Close();
         }
+
+        dev.Close();
     }
 
     LOG(Logger::CRIT) << "Done." << flush;
