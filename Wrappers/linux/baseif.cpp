@@ -134,13 +134,20 @@ static void *_wrapThreadFunc(void *info) {
 }
 
 int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func,
-		    void *pData, const char *name)
+                    void *pData, const char *name)
 {
         wrapThreadInfo_t *info = (wrapThreadInfo_t*)wrapHeapAlloc(sizeof(wrapThreadInfo_t));
+        if (info == nullptr)
+        {
+            wrapLogError("wrapThreadStart(): Failed to allocate space");
+            return WRAPOS_ERROR;
+        }
         info->function = func;
         info->pData = pData;
         int err = pthread_create(&info->handle, NULL, _wrapThreadFunc, info);
-        if(err) {
+        if(err)
+        {
+            wrapLogError("wrapThreadStart(): Failed to create thread");
                 return WRAPOS_ERROR;
         }
         pthread_setname_np(info->handle, name);
@@ -151,6 +158,11 @@ int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func,
 
 int wrapThreadStop(wrapThread_t *thread) {
         wrapThreadInfo_t *info = (wrapThreadInfo_t*)*thread;
+        if (info == nullptr)
+        {
+            wrapLogError("wrapThreadStop(): invalid thread");
+            return WRAPOS_ERROR;
+        }
         pthread_cancel(info->handle);
         pthread_join(info->handle, NULL);
         wrapHeapFree(info);
