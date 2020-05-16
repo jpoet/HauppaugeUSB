@@ -100,8 +100,8 @@ typedef void(*wrapThreadFunction_t)(void *pData);
 
 typedef void *wrapThread_t;
 
-int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func, void *pData,
-                    const char *name);
+int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func,
+                    void *pData);
 int wrapThreadStop(wrapThread_t *thread);
 
 inline void wrapThreadExit(int result) {

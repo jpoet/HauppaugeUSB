@@ -133,8 +133,7 @@ static void *_wrapThreadFunc(void *info) {
         return NULL;
 }
 
-int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func,
-                    void *pData, const char *name)
+int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func, void *pData)
 {
         wrapThreadInfo_t *info = (wrapThreadInfo_t*)wrapHeapAlloc(sizeof(wrapThreadInfo_t));
         if (info == nullptr)
@@ -150,13 +149,8 @@ int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func,
             wrapLogError("wrapThreadStart(): Failed to create thread");
                 return WRAPOS_ERROR;
         }
-        else
-        {
-            wrapLogNotice("Created thread %s", name);
-        }
 
         *thread = (wrapThread_t)info;
-//        setThreadName(name);
         return WRAPOS_OK;
 }
 
