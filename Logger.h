@@ -18,124 +18,69 @@
  * along with HauppaugeUSB.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _Logger_h_
-#define _Logger_h_
+#ifndef _logger_h_
+#define _logger_h_
 
-#include <chrono>
+// necessary when linking the boost_log library dynamically
+#define BOOST_LOG_DYN_LINK 1
 
-#include <boost/thread/thread.hpp>
+#include <boost/log/sources/severity_logger.hpp>
+#include <boost/log/sources/global_logger_storage.hpp>
+#include <boost/log/utility/manipulators/add_value.hpp>
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
+namespace logging = boost::log;
+namespace attrs = boost::log::attributes;
+namespace keywords = boost::log::keywords;
 
-#include <stdarg.h>
-#include <string>
-
-class Logger : public std::ostream
+// We define our own severity levels
+enum SeverityLvl
 {
-    class LogStreamBuf: public std::stringbuf
-    {
-      public:
-        LogStreamBuf(Logger* parent) { m_parent = parent; }
-
-        // On sync, output to log
-        virtual int sync(void)
-        {
-            m_parent->Log(str());
-            str("");
-            m_parent->Unlock();
-            return 0;
-        }
-
-      private:
-        LogStreamBuf(void);
-
-        Logger* m_parent;
-    };
-
-    friend class LogStreamBuf;
-
-  public:
-    enum Levels {EMERG, ALERT, CRIT, ERR, WARNING, NOTICE, INFO, DEBUG};
-
-    static Logger* Get(void);
-    static void setThreadName(const std::string& name);
-
-    void setAppName(const std::string& app_name);
-    void suppressLoc(bool suppress);
-    void setFilter(const std::string& lvl);
-    void setFilter(int lvl);
-    bool setFile(const std::string& fname);
-    void setJournal(bool enable);
-    void setQuiet(bool enable);
-
-    void LogMsg(const std::string& file, const std::string& function,
-                int line, int level, const std::string& msg)
-    {
-        std::chrono::system_clock::time_point now
-            = std::chrono::system_clock::now();
-        std::chrono::duration<int64_t, std::nano> offset
-            = std::chrono::steady_clock::now() - m_log_start;
-
-        boost::lock_guard<boost::mutex> lock(m_mutex);
-        Output(now, offset, file, function, line, level, msg, true);
-    }
-    std::ostream& Location(const std::string& file, const std::string& function,
-                  int line, int level)
-    {
-        m_loc_file = file;
-        m_loc_function = function;
-        m_loc_line = line;
-        m_level = level;
-        return *this;
-    }
-
-  protected:
-    void Log(const std::string& msg)
-    {
-        std::chrono::system_clock::time_point now
-            = std::chrono::system_clock::now();
-        std::chrono::duration<int64_t, std::nano> offset
-            = std::chrono::steady_clock::now() - m_log_start;
-
-        m_mutex.lock();
-        Output(now, offset, m_loc_file, m_loc_function,
-               m_loc_line, m_level, msg, false);
-    }
-
-    void Unlock(void)
-    {
-        m_mutex.unlock(); // Lock held in Log(const std::string& msg)
-    }
-
-  private:
-    Logger(void);
-
-    void Output(std::chrono::system_clock::time_point& now,
-                std::chrono::duration<int64_t, std::nano>& offset,
-                const std::string& file, const std::string& function,
-                int line, int level, const std::string& msg, bool sync);
-
-    pid_t        m_pid;
-    std::string  m_app_name;
-    std::string  m_file_name;
-    std::ofstream m_file;
-    int          m_log_level_filt;
-    bool         m_suppressLoc;
-    bool         m_use_journal;
-    bool         m_quiet;
-    LogStreamBuf m_stream_buf;
-    std::chrono::steady_clock::time_point m_log_start;
-
-    std::string  m_loc_file;
-    std::string  m_loc_function;
-    int          m_loc_line;
-    int          m_level;
-
-    boost::mutex   m_mutex;
-    static Logger* m_instance;
+    DEBUG,
+    INFO,
+    NOTICE,
+    WARNING,
+    ERROR,
+    CRITICAL
 };
+
+// Initial logging severity threshold
+#define SEVERITY_THRESHOLD CRITICAL
+
+// Allow a thread to declare its name
+void setThreadName(const char *name);
+// Change log level
+void setLogLevelFilter(SeverityLvl level);
+void setLogLevelFilter(const std::string& lvl);
+void disableConsoleLog(void);
+void setLogFilePath(const std::string & path);
+
+// register a global logger
+BOOST_LOG_GLOBAL_LOGGER(logger,
+                        logging::sources::severity_logger_mt<SeverityLvl>)
+
+
+// Convert file path to only the filename
+inline std::string strippath(std::string path) {
+   return path.substr(path.find_last_of("/")+1);
+}
+
+#define LOG(sev)         \
+    BOOST_LOG_SEV(logger::get(), sev)           \
+    << logging::add_value("a_FileName", strippath(__FILE__))    \
+    << logging::add_value("a_LineNum", __LINE__) \
+    << logging::add_value("a_Function", __FUNCTION__)
+
+
+// ===== log macros =====
+#define DEBUGLOG  LOG(SeverityLvl::DEBUG)
+#define INFOLOG   LOG(SeverityLvl::INFO)
+#define NOTICELOG LOG(SeverityLvl::NOTICE)
+#define WARNLOG   LOG(SeverityLvl::WARNING)
+#define ERRORLOG  LOG(SeverityLvl::ERROR)
+#define CRITLOG   LOG(SeverityLvl::CRITICAL)
+
+
+/* For Hauppauge src */
 
 ///
 /// \breif Format message
@@ -167,17 +112,30 @@ std::string FmtString(const char *format, ...) throw();
 ///
 std::string FmtString(const char *format, va_list ap) throw();
 
-#define LOG(LEVEL) \
-    Logger::Get()->Location(__FILE__, __FUNCTION__, __LINE__, LEVEL)
+inline char* chomp(char *str)
+{
+    int l;
 
-#define LOGMSG(LEVEL, ARG) Logger::Get()->LogMsg(__FILE__, __FUNCTION__, __LINE__, LEVEL, ARG)
+    for(;;)
+    {
+        l = strlen(str);
+        if (str[l-1] != '\n')
+            return str;
+        str[l-1] = 0;
+    }
+    return str;
+}
+
+#define LOGMSG(LEVEL, ARG) LOG(SeverityLvl(LEVEL)) << ARG
 
 #define LOGFMT(LEVEL, FMT, ARGS) LOGMSG(LEVEL, FmtString(FMT, ARGS))
 
-#define LOGGER_DEBUG(ARG) LOGMSG(Logger::DEBUG, ARG);
-#define LOGGER_INFO(ARG)  LOGMSG(Logger::INFO, ARG);
-#define LOGGER_WARN(ARG)  LOGMSG(Logger::WARNING, ARG);
-#define LOGGER_ERROR(ARG) LOGMSG(Logger::ERR, ARG);
-#define LOGGER_FATAL(ARG) LOGMSG(Logger::CRIT, ARG);
+#define LOGGER_DEBUG(ARG)  LOGMSG(DEBUG, ARG);
+#define LOGGER_INFO(ARG)   LOGMSG(INFO, ARG);
+#define LOGGER_NOTICE(ARG) LOGMSG(NOTICE, ARG);
+#define LOGGER_WARN(ARG)   LOGMSG(WARNING, ARG);
+#define LOGGER_ERROR(ARG)  LOGMSG(ERROR, ARG);
+#define LOGGER_FATAL(ARG)  LOGMSG(CRITICAL, ARG);
 
-#endif
+
+#endif // _logger_h_

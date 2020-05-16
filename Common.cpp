@@ -20,6 +20,7 @@
 
 
 #include "Common.h"
+#include "Logger.h"
 
 using namespace std;
 
@@ -28,50 +29,50 @@ bool StartEncoding(encoderDev_DXT_t & encDev, FX2Device_t & fx2)
 {
     if (!encDev.startCapture())
     {
-        LOG(Logger::CRIT) << "Encoder start capture FAILED" << flush;
+        CRITLOG << "Encoder start capture FAILED";
         encDev.stopCapture();
         return false;
     }
-    LOG(Logger::NOTICE) << "Capture started" << flush;
+    INFOLOG << "Capture started";
 
-    LOG(Logger::DEBUG) << "\nPORT_A: [0x" << fx2.getPortDir(FX2_PORT_A)
-                       << "] 0x" << fx2.getPortState(FX2_PORT_A) << '\n'
-                       << "PORT_B: [0x" << fx2.getPortDir(FX2_PORT_B)
-                       << "] 0x" << fx2.getPortState(FX2_PORT_B) << '\n'
-                       << "PORT_C: [0x" << fx2.getPortDir(FX2_PORT_C)
-                       << "] 0x" << fx2.getPortState(FX2_PORT_C) << '\n'
-                       << "PORT_D: [0x" << fx2.getPortDir(FX2_PORT_D)
-                       << "] 0x" << fx2.getPortState(FX2_PORT_D) << '\n'
-                       << "PORT_E: [0x" << fx2.getPortDir(FX2_PORT_E)
-                       << "] 0x" << fx2.getPortState(FX2_PORT_E) << '\n'
-                       << "CTL_PORTS: [0x" << fx2.getPortDir(FX2_CTL_PORTS)
-                       << "] 0x" << fx2.getPortState(FX2_CTL_PORTS) << flush;
+    DEBUGLOG << "\nPORT_A: [0x" << fx2.getPortDir(FX2_PORT_A)
+             << "] 0x" << fx2.getPortState(FX2_PORT_A) << '\n'
+             << "PORT_B: [0x" << fx2.getPortDir(FX2_PORT_B)
+             << "] 0x" << fx2.getPortState(FX2_PORT_B) << '\n'
+             << "PORT_C: [0x" << fx2.getPortDir(FX2_PORT_C)
+             << "] 0x" << fx2.getPortState(FX2_PORT_C) << '\n'
+             << "PORT_D: [0x" << fx2.getPortDir(FX2_PORT_D)
+             << "] 0x" << fx2.getPortState(FX2_PORT_D) << '\n'
+             << "PORT_E: [0x" << fx2.getPortDir(FX2_PORT_E)
+             << "] 0x" << fx2.getPortState(FX2_PORT_E) << '\n'
+             << "CTL_PORTS: [0x" << fx2.getPortDir(FX2_CTL_PORTS)
+             << "] 0x" << fx2.getPortState(FX2_CTL_PORTS);
 
     return true;
 }
 
 bool StopEncoding(encoderDev_DXT_t & encDev, FX2Device_t & fx2)
 {
-    LOG(Logger::DEBUG) << "\nPORT_A: [0x" << fx2.getPortDir(FX2_PORT_A)
-                       << "] 0x" << fx2.getPortState(FX2_PORT_A) << '\n'
-                       << "PORT_B: [0x" << fx2.getPortDir(FX2_PORT_B)
-                       << "] 0x" << fx2.getPortState(FX2_PORT_B) << '\n'
-                       << "PORT_C: [0x" << fx2.getPortDir(FX2_PORT_C)
-                       << "] 0x" << fx2.getPortState(FX2_PORT_C) << '\n'
-                       << "PORT_D: [0x" << fx2.getPortDir(FX2_PORT_D)
-                       << "] 0x" << fx2.getPortState(FX2_PORT_D) << '\n'
-                       << "PORT_E: [0x" << fx2.getPortDir(FX2_PORT_E)
-                       << "] 0x" << fx2.getPortState(FX2_PORT_E)<< '\n'
-                       << "CTL_PORTS: [0x" << fx2.getPortDir(FX2_CTL_PORTS)
-                       << "] 0x" << fx2.getPortState(FX2_CTL_PORTS) << flush;
+    DEBUGLOG << "\nPORT_A: [0x" << fx2.getPortDir(FX2_PORT_A)
+             << "] 0x" << fx2.getPortState(FX2_PORT_A) << '\n'
+             << "PORT_B: [0x" << fx2.getPortDir(FX2_PORT_B)
+             << "] 0x" << fx2.getPortState(FX2_PORT_B) << '\n'
+             << "PORT_C: [0x" << fx2.getPortDir(FX2_PORT_C)
+             << "] 0x" << fx2.getPortState(FX2_PORT_C) << '\n'
+             << "PORT_D: [0x" << fx2.getPortDir(FX2_PORT_D)
+             << "] 0x" << fx2.getPortState(FX2_PORT_D) << '\n'
+             << "PORT_E: [0x" << fx2.getPortDir(FX2_PORT_E)
+             << "] 0x" << fx2.getPortState(FX2_PORT_E)<< '\n'
+             << "CTL_PORTS: [0x" << fx2.getPortDir(FX2_CTL_PORTS)
+             << "] 0x" << fx2.getPortState(FX2_CTL_PORTS);
 
     if (!encDev.stopCapture())
     {
-        LOG(Logger::CRIT) << "Encoder stop capture FAILED" << flush;
+        CRITLOG << "Encoder stop capture FAILED";
         return false;
     }
 
-    LOG(Logger::NOTICE) << "Capture stopped" << flush;
+    INFOLOG << "Capture stopped";
 
     return true;
 }

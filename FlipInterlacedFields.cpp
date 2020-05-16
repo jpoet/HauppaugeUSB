@@ -16,6 +16,6 @@ void FlipHDMIFields(void)
     streams
   */
 
-  LOG(Logger::NOTICE) << "Interlaced: flipping field order." << std::flush;
-  VRX_set_AV_INV_F(1);
+    INFOLOG << "Interlaced: flipping field order.";
+    VRX_set_AV_INV_F(1);
 }

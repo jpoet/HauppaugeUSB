@@ -2,6 +2,7 @@
 #include <set>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 #include <libusb.h>
 
 #include "USBif.h"
@@ -448,7 +449,7 @@ static const char *strTrSt(int st)
     do {                                        \
         if(!(V))                                \
         {                                       \
-            wrapLogError((M));                  \
+            ERRORLOG << M;                      \
             int ret = USBWRAP_ERROR_NO_DEVICE;  \
             C;                                  \
             return ret;                         \
@@ -463,8 +464,8 @@ static void async_callback (libusb_transfer *t)
     USBWrapperAsyncCtx_t *ctx = (USBWrapperAsyncCtx_t*)t->user_data;
 
     if (t->status != LIBUSB_TRANSFER_COMPLETED)
-        wrapLogError("cannot finish async bulk read from endpoint --: (%d) %s",
-                     t->status, strTrSt(t->status));
+        ERRORLOG << "cannot finish async bulk read from endpoint --: ("
+                 << t->status << ") " << strTrSt(t->status);
 //      else wrapLogDebug("async Ok, length: %d", t->actual_length);
     if (ctx)
         ctx->set(retTrSt(t->status), t->actual_length);
@@ -481,7 +482,7 @@ int USBWrapper_t::controlMessage(USBWrapperControlMessage_t &msg,
                                     buf, msg.wLength, timeout);
     if (r < 0)
     {
-        wrapLogError("cannot send control message: %s", strMsg(r));
+        ERRORLOG << "cannot send control message: " << strMsg(r);
         if (m_use_error_cb)
             m_error_cb();
         return retMsg(r);
@@ -510,8 +511,9 @@ int USBWrapper_t::bulkRead(uint8_t num, uint8_t *buf, uint32_t len,
         }
         else
         {
-            wrapLogError("cannot bulk read from endpoint 0x%02X: %s",
-                         num, strMsg(r));
+            ERRORLOG << "cannot bulk read from endpoint " << showbase
+                     << setfill('0') << setw(2) << right << hex << num
+                     << ": " << strMsg(r);
         }
         return retMsg(r);
     }
@@ -528,7 +530,7 @@ int USBWrapper_t::bulkReadAsync(USBWrapperAsyncCtx_t &ctx, uint8_t num,
     libusb_transfer *t = libusb_alloc_transfer(0);
 
     if (t == NULL) {
-        wrapLogError("cannot async bulk read: no memory");
+        ERRORLOG << "cannot async bulk read: no memory";
         return USBWRAP_ERROR_NO_MEM;
     }
 
@@ -539,8 +541,9 @@ int USBWrapper_t::bulkReadAsync(USBWrapperAsyncCtx_t &ctx, uint8_t num,
 
     if (r)
     {
-        wrapLogError("cannot async bulk read from endpoint 0x%02X: %s",
-                     num, strMsg(r));
+        ERRORLOG << "cannot async bulk read from endpoint " << showbase
+                 << setfill('0') << setw(2) << right << hex << num
+                 << ": " << strMsg(r);
         int _r = retMsg(r);
         ctx.set(_r, 0);
         return _r;
@@ -559,7 +562,9 @@ int USBWrapper_t::bulkWrite(uint8_t num, const uint8_t *buf,
                                  len, &l, timeout);
     if (r != LIBUSB_SUCCESS)
     {
-        wrapLogError("cannot bulk write to endpoint 0x%02X: %s", num, strMsg(r));
+        ERRORLOG << "cannot bulk write to endpoint " << showbase
+                 << setfill('0') << setw(2) << right << hex << num
+                 << ": " << strMsg(r);
         return retMsg(r);
     }
     return len;
@@ -572,8 +577,10 @@ int USBWrapper_t::clearStall(uint8_t num)
     int r = libusb_clear_halt(m_handle, num);
     if (r != LIBUSB_SUCCESS)
     {
-        wrapLogError("cannot clear stall of endpoint 0x%02X: %s",
-                     num, strMsg(r));
+        ERRORLOG  << "cannot clear stall of endpoint "<< showbase
+                  << setfill('0') << setw(2) << right << hex << num
+                  << ": " << strMsg(r);
+
     }
     return retMsg(r);
 }

@@ -9,11 +9,11 @@ extern "C" {
 #endif
 
 typedef enum {
-    WRAPLOGL_ERROR = Logger::ERR,
-    WRAPLOGL_WARN = Logger::WARNING,
-    WRAPLOGL_NOTICE = Logger::NOTICE,
-    WRAPLOGL_INFO = Logger::INFO,
-    WRAPLOGL_DEBUG = Logger::DEBUG
+    WRAPLOGL_ERROR  = SeverityLvl::ERROR,
+    WRAPLOGL_WARN   = SeverityLvl::WARNING,
+    WRAPLOGL_NOTICE = SeverityLvl::NOTICE,
+    WRAPLOGL_INFO   = SeverityLvl::INFO,
+    WRAPLOGL_DEBUG  = SeverityLvl::DEBUG
 } WRAPLOGL_t;
 
 // wrapLog_vprintf(WRAPLOGL_t logLevel, const char *fmt, va_list args)

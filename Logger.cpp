@@ -18,260 +18,230 @@
  * along with HauppaugeUSB.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-//#define CONFIG_SYSTEMD_JOURNAL 0
-#if CONFIG_SYSTEMD_JOURNAL
-#define SD_JOURNAL_SUPPRESS_LOCATION 1 // Manage location ourselves.
-#include <systemd/sd-journal.h>
-#endif
-
-#define BOOST_FILESYSTEM_NO_DEPRECATED 1
-#include <boost/filesystem.hpp>
-
-#include <iostream>
-#include <sstream>
-
 #include "Logger.h"
 
-#include <ctime>
-
-#include <libgen.h>
-#include <sys/types.h>
-#include <unistd.h>
-
+#include <boost/log/core/core.hpp>
+#include <boost/log/expressions/formatters/date_time.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/log/utility/setup/common_attributes.hpp>
+#include <boost/log/sinks/sync_frontend.hpp>
+#include <boost/log/sinks/text_ostream_backend.hpp>
+#include <boost/log/sinks/text_file_backend.hpp>
+#include <boost/log/sinks/unlocked_frontend.hpp>
+#include <boost/log/sources/severity_logger.hpp>
+#include <boost/log/support/date_time.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/core/null_deleter.hpp>
+#include <boost/make_shared.hpp>
+#include <boost/shared_ptr.hpp>
 #include <fstream>
-#include <iostream>
-#include <iomanip>
-#include <cassert>
+#include <ostream>
 
-using namespace std;
-using namespace std::chrono;
+namespace logging = boost::log;
+namespace src = boost::log::sources;
+namespace expr = boost::log::expressions;
+namespace sinks = boost::log::sinks;
+namespace attrs = boost::log::attributes;
 
-// Global static pointer used to ensure a single instance of the class.
-Logger* Logger::m_instance = NULL;
-
-Logger::Logger(void)
-    : std::ostream(&m_stream_buf)
-    , m_pid(-1)
-    , m_log_level_filt(Logger::INFO)
-    , m_suppressLoc(false)
-    , m_use_journal(false)
-    , m_quiet(false)
-    , m_stream_buf(this)
+static const char* SeverityStr[] =
 {
-    m_log_start = steady_clock::now();
+    "DEBG",
+    "INFO",
+    "NOTC",
+    "WARN",
+    "ERRR",
+    "CRIT"
+};
+
+bool DisableConsole = false;
+void disableConsoleLog(void)
+{
+    DisableConsole = true;
 }
 
-Logger* Logger::Get(void)
+std::string LogFilePath = "hauppauge2-%Y%m%d-%H%M%S.%N.log";
+void setLogFilePath(const std::string & path)
 {
-    if (!m_instance)   // Only allow one instance of class to be generated.
-        m_instance = new Logger;
-    return m_instance;
+    LogFilePath = path;
 }
 
-void Logger::setThreadName(const std::string& name)
+BOOST_LOG_ATTRIBUTE_KEYWORD(line_id, "LineID", unsigned int)
+BOOST_LOG_ATTRIBUTE_KEYWORD(timestamp, "TimeStamp", boost::posix_time::ptime)
+BOOST_LOG_ATTRIBUTE_KEYWORD(Severity, "Severity", SeverityLvl)
+BOOST_LOG_ATTRIBUTE_KEYWORD(a_thread_name, "ThreadName", std::string)
+
+
+
+// Allow a thread to declare its name
+void setThreadName(const char *name)
 {
-    pthread_setname_np(pthread_self(), name.c_str());
+    logging::core::get()->add_thread_attribute("ThreadName",
+                               attrs::constant<std::string>(name));
 }
 
-void Logger::setAppName(const string& aname)
+void setLogLevelFilter(SeverityLvl level)
 {
-    boost::lock_guard<boost::mutex> lock(m_mutex);
-
-    m_app_name = aname;
-    m_pid = getpid();
+    CRITLOG << "Changing loglevel to " << SeverityStr[level];
+    logging::core::get()->set_filter(Severity >= level);
 }
 
-void Logger::suppressLoc(bool suppress)
+void setLogLevelFilter(const std::string& lvl)
 {
-    boost::lock_guard<boost::mutex> lock(m_mutex);
+    std::string level(lvl);
+    boost::to_upper(level);
 
-    m_suppressLoc = suppress;
-}
-
-void Logger::setFilter(const string& lvl)
-{
-    boost::lock_guard<boost::mutex> lock(m_mutex);
-
-    if (lvl == "emerg")
-        m_log_level_filt = Logger::EMERG;
-    else if (lvl == "alert")
-        m_log_level_filt = Logger::ALERT;
-    else if (lvl == "crit")
-        m_log_level_filt = Logger::CRIT;
-    else if (lvl == "err")
-        m_log_level_filt = Logger::ERR;
-    else if (lvl == "warning")
-        m_log_level_filt = Logger::WARNING;
-    else if (lvl == "notice")
-        m_log_level_filt = Logger::NOTICE;
-    else if (lvl == "info")
-        m_log_level_filt = Logger::INFO;
+    if (level == "CRITICAL")
+        setLogLevelFilter(SeverityLvl::CRITICAL);
+    else if (level == "ERROR")
+        setLogLevelFilter(SeverityLvl::ERROR);
+    else if (level == "WARNING")
+        setLogLevelFilter(SeverityLvl::WARNING);
+    else if (level == "NOTICE")
+        setLogLevelFilter(SeverityLvl::NOTICE);
+    else if (level == "INFO")
+        setLogLevelFilter(SeverityLvl::INFO);
     else
-        m_log_level_filt = Logger::DEBUG;
+        setLogLevelFilter(SeverityLvl::DEBUG);
 }
 
-void Logger::setFilter(int lvl)
+template< typename CharT, typename TraitsT>
+inline std::basic_istream< CharT, TraitsT >& operator>> (
+    std::basic_istream< CharT, TraitsT >& strm, SeverityLvl &lvl)
 {
-    m_log_level_filt = static_cast<Levels>(std::min(lvl,
-                                           static_cast<int>(Logger::DEBUG)));
+    std::string tmp;
+    strm >> tmp;
+
+    // can make it case insensitive to allow 'warning' instead of only 'WARNING'
+    // std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::toupper);
+
+    // if you have a lot of levels you may want use a map instead
+    if (tmp.compare("INFO") == 0)
+        lvl = SeverityLvl::INFO;
+    else if (tmp.compare("NOTICE") == 0)
+        lvl = SeverityLvl::NOTICE;
+    else if (tmp.compare("WARNING") == 0)
+        lvl = SeverityLvl::WARNING;
+    else if (tmp.compare("ERROR") == 0)
+        lvl = SeverityLvl::ERROR;
+    else if (tmp.compare("CRITICAL") == 0)
+        lvl = SeverityLvl::CRITICAL;
+    // provide a default value for invalid strings
+    else
+        lvl = SeverityLvl::DEBUG;
+
+    return strm;
 }
 
-bool Logger::setFile(const string& fname)
+// The operator is used for regular stream formatting
+std::ostream& operator<< (std::ostream& strm, SeverityLvl level)
 {
-    boost::lock_guard<boost::mutex> lock(m_mutex);
+    if (static_cast< std::size_t >(level) <
+        sizeof(SeverityStr) / sizeof(*SeverityStr))
+        strm << SeverityStr[level];
+    else
+        strm << static_cast< int >(level);
 
-    boost::filesystem::path path(fname);
-
-    m_file_name = path.string();
-    m_file.close();
-
-    if (!boost::filesystem::is_directory(path.parent_path()))
-    {
-        boost::system::error_code ec;
-        if (!boost::filesystem::create_directories(path.parent_path(), ec) &&
-            ec.value() != boost::system::errc::success)
-        {
-            cerr << "Unable to create path " << path.parent_path() << ": "
-                 << ec.message() << endl;
-            m_file_name.clear();
-            return false;
-        }
-    }
-
-    m_file.open(m_file_name, ios::app);
-    if (!m_file.is_open())
-    {
-        cerr << "Unable to open log file '" << m_file_name << "': "
-             << strerror(errno) << endl;
-        m_file_name.clear();
-        return false;
-    }
-
-    return true;
+    return strm;
 }
 
-void Logger::setJournal(bool enable)
-{
-    boost::lock_guard<boost::mutex> lock(m_mutex);
+// Attribute value tag type
+struct severity_tag;
 
-    m_use_journal = enable;
+// The operator is used when putting the severity level to log
+logging::formatting_ostream& operator<<
+(
+    logging::formatting_ostream& strm,
+    logging::to_log_manip< SeverityLvl, severity_tag > const& manip
+)
+{
+    SeverityLvl level = manip.get();
+    if (static_cast< std::size_t >(level) <
+        sizeof(SeverityStr) / sizeof(*SeverityStr))
+        strm << SeverityStr[level];
+    else
+        strm << static_cast< int >(level);
+
+    return strm;
 }
 
-void Logger::setQuiet(bool enable)
+BOOST_LOG_GLOBAL_LOGGER_INIT(logger, src::severity_logger_mt)
 {
-    boost::lock_guard<boost::mutex> lock(m_mutex);
+    src::severity_logger_mt<SeverityLvl> logger;
 
-    m_quiet = enable;
-}
+    logging::add_common_attributes();
+    // add attributes
 
-void Logger::Output(std::chrono::system_clock::time_point& now,
-                    std::chrono::duration<int64_t, std::nano>& offset,
-                    const string& file, const string& function,
-                    int line, int level, const string& msg, bool sync)
-{
-    if (sync && m_stream_buf.in_avail())
-        m_stream_buf.sync();
+    // lines are sequentially numbered
+    logger.add_attribute("LineID", attrs::counter<unsigned int>(1));
+    // each log line gets a timestamp
+    logger.add_attribute("TimeStamp", attrs::local_clock());
 
-    char thread_name[16];
-    bool have_thread = pthread_getname_np(pthread_self(), thread_name, 16) == 0;
+    // specify the format of the log message
+    logging::formatter formatter =
+        (expr::stream
+         << expr::format_date_time<boost::posix_time::ptime>
+         ("TimeStamp", "%Y-%m-%dT%H:%M:%S.%f") << " "
+         << expr::attr< SeverityLvl, severity_tag >("Severity")
+//         << boost::log::expressions::attr <boost::log::attributes::current_thread_id::value_type> ("ThreadID") << ", "
+         << " <" << a_thread_name << "> "
+         << expr::attr<std::string>("a_FileName")
+         << ':' << expr::attr<int>("a_LineNum") << " ("
+         << expr::attr<std::string>("a_Function")
+         << ") "
+         << expr::smessage);
 
-    char level_code;
-    switch (level)
+    boost::shared_ptr< logging::core > core = logging::core::get();
     {
-        case Logger:: DEBUG:
-          level_code = 'D';
-          break;
-        case Logger:: INFO:
-          level_code = 'I';
-          break;
-        case Logger:: NOTICE:
-          level_code = 'N';
-          break;
-        case Logger:: WARNING:
-          level_code = 'W';
-          break;
-        case Logger:: ERR:
-          level_code = 'E';
-          break;
-        case Logger:: CRIT:
-          level_code = 'C';
-          break;
-        default:
-          level_code = 'U';
-          break;
-    }
-
-    ostringstream os;
-
-    if (!m_suppressLoc)
-    {
-        if (have_thread)
-            os << '[' << thread_name << "] ";
-        os << basename(const_cast<char*>(file.c_str())) << ':' << line
-           << " (" << function << ") - ";
-    }
-    os << msg;
-
-
-#if CONFIG_SYSTEMD_JOURNAL
-    if (m_use_journal)
-    {
-        sd_journal_send("MESSAGE=%s", os.str().c_str(),
-                        "PRIORITY=%d", level,
-                        "CODE_FILE=%s", file.c_str(),
-                        "CODE_LINE=%d", line,
-                        "CODE_FUNC=%s", function.c_str(),
-                        "SYSLOG_IDENTIFIER=%s", m_app_name.c_str(),
-                        "SYSLOG_PID=%d", m_pid,
-                        "THREAD=%s", thread_name,
-                        NULL);
-    }
+        // add a text sink
+        boost::shared_ptr< sinks::text_file_backend > backend =
+            boost::make_shared< sinks::text_file_backend >
+            (
+             keywords::target    = LogFilePath,
+             keywords::file_name = LogFilePath
+#if 0
+             keywords::rotation_size = 5 * 1024 * 1024,
+             keywords::time_based_rotation =
+                 sinks::file::rotation_at_time_point(12, 0, 0)
 #endif
+             );
 
-    if (level > m_log_level_filt)
-        return;
+        // Wrap it into the frontend and register in the core.
+        // The backend requires synchronization in the frontend.
+        using sink_t = sinks::synchronous_sink< sinks::text_file_backend >;
+        boost::shared_ptr< sink_t > sink(new sink_t(backend));
 
-    if (m_file.is_open())
-    {
-        ostringstream flos;
+        sink->set_formatter(formatter);
 
-        time_t tt = system_clock::to_time_t(now);
-//    tm utc_tm = *gmtime(&tt);
-        tm local_tm = *localtime(&tt);
-        flos.fill('0');
-        flos << setw(4) << local_tm.tm_year + 1900 << '-'
-             << setw(2) << local_tm.tm_mon + 1 << '-'
-             << setw(2) << local_tm.tm_mday << ' '
-             << setw(2) << local_tm.tm_hour << ':'
-             << setw(2) << local_tm.tm_min << ':'
-             << setw(2) << local_tm.tm_sec;
-
-        // Get microseconds
-        system_clock::duration tp = now.time_since_epoch();
-        tp -= duration_cast<seconds>(tp);
-        flos << '.' << setw(6) << duration_cast<microseconds>(tp).count();
-        m_file << flos.str() << ' ' << level_code << ' ' << os.str() << endl;
+        // Register the sink in the logging core
+        core->add_sink(sink);
     }
 
-    if (!m_quiet)
+    if (!DisableConsole)
     {
-        ostringstream console;
+        // Add a console sink
+        using text_sink = sinks::synchronous_sink<sinks::text_ostream_backend>;
+        boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
 
-        auto hh = duration_cast<hours>(offset);
-        offset -= hh;
-        auto mm = duration_cast<minutes>(offset);
-        offset -= mm;
-        auto ss = duration_cast<seconds>(offset);
-        offset -= ss;
-        auto ff = duration_cast<microseconds>(offset);
+        // Add logging to the console
+        // We have to provide an empty deleter to avoid destroying the
+        // global stream object
+        boost::shared_ptr< std::ostream > stream
+            (&std::clog, boost::null_deleter());
+        sink->locked_backend()->add_stream(stream);
 
-        console.fill('0');
-        console << setw(3) << hh.count() << ':' << setw(2) << mm.count()
-                << ':' << setw(2) << ss.count() << '.' << setw(6) << ff.count();
+        sink->set_formatter(formatter);
 
-        cerr << console.str() << ' ' << level_code << ' ' << os.str() << endl;
+        // Register the sink in the logging core
+        core->add_sink(sink);
     }
+
+    core->set_filter(Severity >= SeverityLvl::INFO);
+
+    return logger;
 }
+
+
+/* For Hauppague src */
 
 ///
 /// \breif Format message
@@ -293,6 +263,11 @@ void FmtString(std::string &dst, const char *format, va_list ap) throw()
         dst = "Format error! format: ";
         dst.append(format);
     }
+
+    // Remove trailing nl and/or cr
+    while (!dst.empty() &&
+           (dst[dst.length() - 1] == '\n' || dst[dst.length() - 1] == '\r'))
+        dst.erase(dst.length() - 1);
 }
 
 ///

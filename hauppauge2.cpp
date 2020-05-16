@@ -24,7 +24,6 @@
 #include <boost/tokenizer.hpp>
 #include <boost/token_functions.hpp>
 
-#include "Logger.h"
 #include "Common.h"
 #include "HauppaugeDev.h"
 #include "MythTV.h"
@@ -165,6 +164,8 @@ int main(int argc, char *argv[])
     Parameters params;
     int bus, port;
 
+    setThreadName("main");
+
     po::options_description cmd_line("Hauppauge libusb based device recorder");
     cmd_line.add_options()
         ("version", "Display the version number")
@@ -241,7 +242,7 @@ int main(int argc, char *argv[])
         ("logpath", po::value<string>(),
          "Writes logging messages to a file in the directory "
          "logpath with filenames in the format: hauppauge2-<serial#>.pid.log")
-        ("loglevel", po::value<string>()->default_value("notice"),
+        ("loglevel", po::value<string>()->default_value("NOTICE"),
          "Set the logging level.  All log messages at lower "
          "levels will be discarded. In descending order: emerg, alert, crit, "
          "err, warning, notice, info, debug")
@@ -259,8 +260,6 @@ int main(int argc, char *argv[])
          "err, warning, notice, info, debug")
         ("description", po::value<string>(),
          "Set the description used in the MythTV log files.");
-
-    Logger::setThreadName("main");
 
     po::options_description cmdline_options;
     cmdline_options.add(cmd_line).add(config);
@@ -328,15 +327,8 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-//    Logger::Get()->suppressLoc(true);
     if (vm.count("quiet"))
-        Logger::Get()->setQuiet(true);
-
-    if (vm.count("override-loglevel"))
-        Logger::Get()->setFilter(vm["override-loglevel"].as<string>());
-    else if (vm.count("loglevel"))
-        Logger::Get()->setFilter(vm["loglevel"].as<string>());
-
+        disableConsoleLog();
 
     if (vm.count("logpath") && vm.count("quiet") < 2)
     {
@@ -345,9 +337,15 @@ int main(int argc, char *argv[])
         if (vm.count("serial"))
             path << "-" << vm["serial"].as<string>();
         path << ".log";
-        if (!Logger::Get()->setFile(path.str()))
-            return -1;
+        setLogFilePath(path.str());
     }
+
+    if (vm.count("override-loglevel"))
+        setLogLevelFilter(vm["override-loglevel"].as<string>());
+    else if (vm.count("loglevel"))
+        setLogLevelFilter(vm["loglevel"].as<string>());
+
+    CRITLOG << "Starting up";
 
     if (vm.count("serial"))
     {
@@ -355,14 +353,13 @@ int main(int argc, char *argv[])
 
         if (!FindDev(params.serial, bus, port))
         {
-            LOG(Logger::CRIT) << "Device " << params.serial
-                              << " not found on USB bus.\n" << flush;
+            CRITLOG << "Device " << params.serial
+                    << " not found on USB bus.\n";
             ListDevs();
             return -1;
         }
-        LOG(Logger::CRIT) << "Initializing [Bus: " << bus
-                          << ", Port: " << port << "] " << params.serial
-                          << flush;
+        CRITLOG << "Initializing [Bus: " << bus
+                << ", Port: " << port << "] " << params.serial;
     }
 
     if (vm.count("input"))
@@ -477,6 +474,6 @@ int main(int argc, char *argv[])
         dev.Close();
     }
 
-    LOG(Logger::CRIT) << "Done." << flush;
+    CRITLOG << "Done.";
     return 0;
 }

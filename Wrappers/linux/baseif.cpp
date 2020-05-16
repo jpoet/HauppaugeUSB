@@ -150,9 +150,13 @@ int wrapThreadStart(wrapThread_t *thread, wrapThreadFunction_t func,
             wrapLogError("wrapThreadStart(): Failed to create thread");
                 return WRAPOS_ERROR;
         }
-        pthread_setname_np(info->handle, name);
-//      pthread_detach(info->handle);
+        else
+        {
+            wrapLogNotice("Created thread %s", name);
+        }
+
         *thread = (wrapThread_t)info;
+//        setThreadName(name);
         return WRAPOS_OK;
 }
 

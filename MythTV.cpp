@@ -19,6 +19,7 @@
  */
 
 #include "MythTV.h"
+#include "Logger.h"
 #include <unistd.h>
 #include <poll.h>
 #include <boost/algorithm/string/predicate.hpp>
@@ -61,7 +62,7 @@ MythTV::~MythTV(void)
 
 void MythTV::Terminate(void)
 {
-    LOG(Logger::CRIT) <<"Terminating." << flush;
+    CRITLOG << "Terminating.";
     m_run = false;
 
     string msg;
@@ -141,7 +142,7 @@ void MythTV::OpenDev(void)
 
 void MythTV::Fatal(const string & msg)
 {
-    LOG(Logger::CRIT) << msg << flush;
+    CRITLOG << msg;
 
     std::unique_lock<std::mutex> lk(m_run_mutex);
     if (!m_fatal)
@@ -158,13 +159,13 @@ bool MythTV::StartEncoding(string & resultmsg)
     if (m_streaming)
     {
         resultmsg = "Already streaming!";
-        LOG(Logger::WARNING) << resultmsg << flush;
+        WARNLOG << resultmsg;
         return true;
     }
     if (!m_ready)
     {
         resultmsg = "Hauppauge device not ready.";
-        LOG(Logger::CRIT) << resultmsg << flush;
+        CRITLOG << resultmsg;
         return false;
     }
 
@@ -187,14 +188,14 @@ bool MythTV::StopEncoding(string & resultmsg, bool soft)
         if (!soft)
         {
             resultmsg = "Already not streaming!";
-            LOG(Logger::WARNING) << resultmsg << flush;
+            WARNLOG << resultmsg;
         }
         return true;
     }
     if (!m_ready)
     {
         resultmsg = "Hauppauge device not ready.";
-        LOG(Logger::CRIT) << resultmsg << flush;
+        CRITLOG << resultmsg;
         return false;
     }
 
@@ -202,7 +203,7 @@ bool MythTV::StopEncoding(string & resultmsg, bool soft)
     if (!m_dev)
     {
         resultmsg = "Invalid Hauppauge device.";
-        LOG(Logger::CRIT) << resultmsg << flush;
+        CRITLOG << resultmsg;
         m_flow_mutex.unlock();
         return false;
     }
@@ -211,7 +212,7 @@ bool MythTV::StopEncoding(string & resultmsg, bool soft)
     m_streaming = false;
     m_flow_cond.notify_all();
 
-    LOG(Logger::NOTICE) << "Stopping encoder." << flush;
+    INFOLOG << "Stopping encoder.";
     if (!m_dev->StopEncoding())
     {
         resultmsg = m_dev->ErrorString();
@@ -219,7 +220,7 @@ bool MythTV::StopEncoding(string & resultmsg, bool soft)
     }
 
     resultmsg.clear();
-    LOG(Logger::NOTICE) << "Encoder stopped" << flush;
+    INFOLOG << "Encoder stopped";
     return true;
 }
 
@@ -243,21 +244,21 @@ bool Commands::send_status(const string & command, const string & serial,
 
     if (len != static_cast<int>(buf.size()))
     {
-        LOG(Logger::ERR) << "Status -- Wrote " << len
-                         << " of " << buf.size()
-                         << " bytes of status '" << status << "'" << flush;
+        ERRORLOG << "Status -- Wrote " << len
+                 << " of " << buf.size()
+                 << " bytes of status '" << status << "'";
         return false;
     }
     else
-        LOG(Logger::NOTICE) << command << ": '"
-                            << serial << ":" << status << "'" << flush;
+        INFOLOG << command << ": '"
+                << serial << ":" << status << "'";
 
     return true;
 }
 
 bool Commands::process_command(const string & cmd)
 {
-    LOG(Logger::DEBUG) << "Processing '" << cmd << "'" << flush;
+    DEBUGLOG << "Processing '" << cmd << "'";
 
     if (starts_with(cmd, "APIVersion?"))
     {
@@ -449,8 +450,7 @@ void Commands::Run(void)
     polls[0].events  = POLLIN | POLLPRI;
     polls[0].revents = 0;
 
-    Logger::setThreadName("Commands");
-    LOG(Logger::INFO) << "Command parser: ready." << flush;
+    DEBUGLOG << "Command parser: ready.";
 
     while (m_parent->m_run)
     {
@@ -458,7 +458,7 @@ void Commands::Run(void)
 
         if (polls[0].revents & POLLHUP)
         {
-            LOG(Logger::ERR) << "poll eof (POLLHUP)" << flush;
+            ERRORLOG << "poll eof (POLLHUP)";
             break;
         }
         else if (polls[0].revents & POLLNVAL)
@@ -479,22 +479,22 @@ void Commands::Run(void)
             {
                 if ((EOVERFLOW == errno))
                 {
-                    LOG(Logger::ERR) << "command overflow" << flush;
+                    ERRORLOG << "command overflow";
                     break; // we have an error to handle
                 }
 
                 if ((EAGAIN == errno) || (EINTR  == errno))
                 {
-                    LOG(Logger::ERR) << "retry command read." << flush;
+                    ERRORLOG << "retry command read.";
                     continue; // errors that tell you to try again
                 }
 
-                LOG(Logger::ERR) << "unknown error reading command." << flush;
+                ERRORLOG << "unknown error reading command.";
             }
         }
     }
 
-    LOG(Logger::INFO) << "Command parser: shutting down" << flush;
+    DEBUGLOG << "Command parser: shutting down";
 }
 
 Buffer::Buffer(MythTV * parent)
@@ -526,15 +526,15 @@ void Buffer::Fill(void * data, size_t len)
         }
         else if (++dropped % 25 == 0)
         {
-            LOG(Logger::WARNING) << "Packet queue overrun.  Dropped " << dropped
-                                 << "packets." << flush;
+            WARNLOG << "Packet queue overrun.  Dropped " << dropped
+                    << "packets.";
         }
 
         m_parent->m_flow_mutex.unlock();
         m_parent->m_flow_cond.notify_all();
     }
     else
-        LOG(Logger::WARNING) << "Fill: Timed out on flow lock." << flush;
+        WARNLOG << "Fill: Timed out on flow lock.";
 
     m_heartbeat = std::chrono::system_clock::now();
 }
@@ -550,8 +550,7 @@ void Buffer::Run(void)
     uint64_t   empty_cnt = 0;
     std::mutex tmp; // This is the only consumer, so can use local
 
-    Logger::setThreadName("Buffer");
-    LOG(Logger::INFO) << "Buffer: Ready for data." << flush;
+    DEBUGLOG << "Buffer: Ready for data.";
 
     while (m_parent->m_run)
     {
@@ -568,13 +567,12 @@ void Buffer::Run(void)
             send_time = time (NULL) + (60 * 5);
             write_total += written;
             if (m_parent->m_streaming)
-                LOG(Logger::NOTICE) << "Count: " << write_cnt
-                                    << ", Empty cnt: " << empty_cnt
-                                    << ", Written: " << written
-                                    << ", Total: " << write_total
-                                    << flush;
+                INFOLOG << "Count: " << write_cnt
+                        << ", Empty cnt: " << empty_cnt
+                        << ", Written: " << written
+                        << ", Total: " << write_total;
             else
-                LOG(Logger::NOTICE) << "Not streaming." << flush;
+                INFOLOG << "Not streaming.";
 
             write_cnt = empty_cnt = written = 0;
         }
@@ -631,5 +629,5 @@ void Buffer::Run(void)
         std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
 
-    LOG(Logger::INFO) << "Buffer: shutting down" << flush;
+    DEBUGLOG << "Buffer: shutting down";
 }
