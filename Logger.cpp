@@ -59,7 +59,7 @@ void disableConsoleLog(void)
     DisableConsole = true;
 }
 
-std::string LogFilePath = "hauppauge2-%Y%m%d-%H%M%S.%N.log";
+std::string LogFilePath = "hauppauge2.log";
 void setLogFilePath(const std::string & path)
 {
     LogFilePath = path;
@@ -69,8 +69,6 @@ BOOST_LOG_ATTRIBUTE_KEYWORD(line_id, "LineID", unsigned int)
 BOOST_LOG_ATTRIBUTE_KEYWORD(timestamp, "TimeStamp", boost::posix_time::ptime)
 BOOST_LOG_ATTRIBUTE_KEYWORD(Severity, "Severity", SeverityLvl)
 BOOST_LOG_ATTRIBUTE_KEYWORD(a_thread_name, "ThreadName", std::string)
-
-
 
 // Allow a thread to declare its name
 void setThreadName(const char *name)
@@ -191,49 +189,25 @@ BOOST_LOG_GLOBAL_LOGGER_INIT(logger, src::severity_logger_mt)
          << expr::smessage);
 
     boost::shared_ptr< logging::core > core = logging::core::get();
-    {
-        // add a text sink
-        boost::shared_ptr< sinks::text_file_backend > backend =
-            boost::make_shared< sinks::text_file_backend >
-            (
-             keywords::target    = LogFilePath,
-             keywords::file_name = LogFilePath
-#if 0
-             keywords::rotation_size = 5 * 1024 * 1024,
-             keywords::time_based_rotation =
-                 sinks::file::rotation_at_time_point(12, 0, 0)
-#endif
-             );
 
-        // Wrap it into the frontend and register in the core.
-        // The backend requires synchronization in the frontend.
-        using sink_t = sinks::synchronous_sink< sinks::text_file_backend >;
-        boost::shared_ptr< sink_t > sink(new sink_t(backend));
+    using backend_t = sinks::text_ostream_backend;
+    using sink_t    = sinks::synchronous_sink< backend_t >;
 
-        sink->set_formatter(formatter);
-
-        // Register the sink in the logging core
-        core->add_sink(sink);
-    }
+    boost::shared_ptr< backend_t > backend(new backend_t());
 
     if (!DisableConsole)
     {
-        // Add a console sink
-        using text_sink = sinks::synchronous_sink<sinks::text_ostream_backend>;
-        boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
-
-        // Add logging to the console
-        // We have to provide an empty deleter to avoid destroying the
-        // global stream object
-        boost::shared_ptr< std::ostream > stream
-            (&std::clog, boost::null_deleter());
-        sink->locked_backend()->add_stream(stream);
-
-        sink->set_formatter(formatter);
-
-        // Register the sink in the logging core
-        core->add_sink(sink);
+        backend->add_stream(boost::shared_ptr< std::ostream >
+                            (&std::clog, boost::null_deleter()));
     }
+    backend->add_stream(boost::shared_ptr< std::ostream >
+                        (new std::ofstream(LogFilePath)));
+    boost::shared_ptr< sink_t > file_sink(new sink_t(backend));
+    file_sink->set_formatter(formatter);
+    core->add_sink(file_sink);
+
+    // Enable auto-flushing after each log record written
+    backend->auto_flush(true);
 
     core->set_filter(Severity >= SeverityLvl::INFO);
 

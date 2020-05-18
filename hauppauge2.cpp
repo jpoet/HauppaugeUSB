@@ -330,15 +330,14 @@ int main(int argc, char *argv[])
     if (vm.count("quiet"))
         disableConsoleLog();
 
-    if (vm.count("logpath") && vm.count("quiet") < 2)
-    {
-        ostringstream path;
-        path << vm["logpath"].as<string>() << "/" << "hauppauge2";
-        if (vm.count("serial"))
-            path << "-" << vm["serial"].as<string>();
-        path << ".log";
-        setLogFilePath(path.str());
-    }
+    ostringstream path;
+    if (vm.count("logpath"))
+        path << vm["logpath"].as<string>() << "/";
+    path << "hauppauge2";
+    if (vm.count("serial"))
+        path << "-" << vm["serial"].as<string>();
+    path << '.' << getpid() << ".log";
+    setLogFilePath(path.str());
 
     if (vm.count("override-loglevel"))
         setLogLevelFilter(vm["override-loglevel"].as<string>());
