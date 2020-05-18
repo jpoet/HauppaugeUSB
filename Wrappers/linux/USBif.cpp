@@ -522,14 +522,15 @@ int USBWrapper_t::bulkRead(uint8_t num, uint8_t *buf, uint32_t len,
 }
 
 int USBWrapper_t::bulkReadAsync(USBWrapperAsyncCtx_t &ctx, uint8_t num,
-                         uint8_t *buf, uint32_t len, uint32_t timeout)
+                                uint8_t *buf, uint32_t len, uint32_t timeout)
 {
     ctx.init();
     ASSERT_OBJ_CMD(ctx.set(ret, 0), m_handle,
                    "cannot async bulk read: device is not opened");
     libusb_transfer *t = libusb_alloc_transfer(0);
 
-    if (t == NULL) {
+    if (t == NULL)
+    {
         ERRORLOG << "cannot async bulk read: no memory";
         return USBWRAP_ERROR_NO_MEM;
     }
@@ -553,7 +554,7 @@ int USBWrapper_t::bulkReadAsync(USBWrapperAsyncCtx_t &ctx, uint8_t num,
 }
 
 int USBWrapper_t::bulkWrite(uint8_t num, const uint8_t *buf,
-                     uint32_t len, uint32_t timeout)
+                            uint32_t len, uint32_t timeout)
 {
     ASSERT_OBJ(m_handle, "cannot bulk write: device is not opened");
 
