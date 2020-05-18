@@ -46,25 +46,6 @@ namespace po = boost::program_options;
 
 const string VERSION = "0.6";
 
-void InitInterruptHandler(void)
-{
-    sigset_t ss;
-    sigemptyset(&ss);
-    sigaddset(&ss, SIGINT);
-    pthread_sigmask(SIG_BLOCK, &ss, NULL);
-}
-
-static int evtWait()
-{
-    sigset_t ss;
-    sigemptyset(&ss);
-    sigaddset(&ss, SIGINT);
-    int s;
-    if (sigwait(&ss, &s) != 0)
-        return 0;
-    return s;
-}
-
 bool ListDevs(void)
 {
     USBWrapper_t usbio;
@@ -159,10 +140,33 @@ void PrintPosition(const chrono::seconds & elapsed,
     cerr << "\r";
 }
 
+
+int volatile g_done = 0;
+void handle_signal(int signum)
+{
+    if (signum == SIGINT || signum == SIGKILL ||
+        signum ==  SIGQUIT || signum == SIGTERM)
+        g_done = 1;
+}
+
+void initInterruptHandler(void)
+{
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+
+    sigemptyset(&sa.sa_mask);
+    sa.sa_handler = handle_signal;
+    sigaction(SIGTERM, &sa, 0);
+    sigaction(SIGINT, &sa, 0);
+    sigaction(SIGQUIT, &sa, 0);
+}
+
 int main(int argc, char *argv[])
 {
     Parameters params;
     int bus, port;
+
+    initInterruptHandler();
 
     setThreadName("main");
 
@@ -300,10 +304,6 @@ int main(int argc, char *argv[])
 
     notify(vm);
 
-#if 0
-    InitInterruptHandler();
-#endif
-
     // Display help text when requested
     if (vm.count("help"))
     {
@@ -428,17 +428,26 @@ int main(int argc, char *argv[])
     {
         HauppaugeDev dev(params);
         if (!dev)
+        {
+            CRITLOG << "Unable to create Hauppauge interface." << flush;
             return -2;
+        }
 
         USBWrapper_t usbio;
         if (!usbio.Open(params.serial))
+        {
+            CRITLOG << "Unable to open USB device." << flush;
             return -3;
+        }
 
         if (!dev.Open(usbio, (params.audioCodec == HAPI_AUDIO_CODEC_AC3)))
         {
+            CRITLOG << "Unable to open Hauppauge device." << flush;
             usbio.Close();
             return -4;
         }
+
+        //HAPI_AUDIO_CODEC audioCodec;
 
         if (vm.count("duration") && vm["duration"].as<int>() > 0)
         {
@@ -449,23 +458,38 @@ int main(int argc, char *argv[])
                 std::chrono::seconds elapsed = chrono::seconds(0);
                 std::chrono::seconds duration =
                     chrono::seconds(vm["duration"].as<int>());
+
+                NOTICELOG << "Will capture for "
+                                    << duration.count()
+                                    << " seconds." << flush;
+
                 do
                 {
+#if 0
+                    if (dev.getInputAudioCodecChanged(audioCodec))
+                    {
+                        if (!dev.setAudioMode(audioCodec))
+                            ERRORLOG << "Error setting new audio mode!" << flush;
+                    }
+#endif
                     elapsed = chrono::duration_cast<chrono::seconds>
                               (chrono::steady_clock::now() - start);
                     PrintPosition(elapsed, duration);
-                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
                 }
-                while (elapsed.count() < duration.count());
+                while (elapsed.count() < duration.count() && !g_done);
                 cerr << "\n\n";
                 dev.StopEncoding();
             }
         }
         else
         {
+            std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(2000);
             if (dev.StartEncoding())
             {
-                evtWait();
+                while (!g_done) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                }
                 dev.StopEncoding();
             }
         }
