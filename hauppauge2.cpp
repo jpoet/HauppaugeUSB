@@ -414,7 +414,7 @@ int main(int argc, char *argv[])
 
     if (vm.count("output"))
         params.output = vm["output"].as<string>();
-    else
+    else if (!params.mythtv)
         params.output = "stdout";
 
     if (params.mythtv)
