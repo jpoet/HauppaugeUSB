@@ -433,65 +433,63 @@ int main(int argc, char *argv[])
             return -2;
         }
 
-        USBWrapper_t usbio;
-        if (!usbio.Open(params.serial))
+        try
         {
-            CRITLOG << "Unable to open USB device." << flush;
-            return -3;
-        }
-
-        if (!dev.Open(usbio, (params.audioCodec == HAPI_AUDIO_CODEC_AC3)))
-        {
-            CRITLOG << "Unable to open Hauppauge device." << flush;
-            usbio.Close();
-            return -4;
-        }
-
-        //HAPI_AUDIO_CODEC audioCodec;
-
-        if (vm.count("duration") && vm["duration"].as<int>() > 0)
-        {
-            if (dev.StartEncoding())
+            USBWrapper_t usbio;
+            if (!usbio.Open(params.serial))
             {
-                chrono::steady_clock::time_point start =
-                    chrono::steady_clock::now();
-                std::chrono::seconds elapsed = chrono::seconds(0);
-                std::chrono::seconds duration =
-                    chrono::seconds(vm["duration"].as<int>());
+                CRITLOG << "Unable to open USB device." << flush;
+                return -3;
+            }
 
-                NOTICELOG << "Will capture for "
-                                    << duration.count()
-                                    << " seconds." << flush;
+            if (!dev.Open(usbio, (params.audioCodec == HAPI_AUDIO_CODEC_AC3)))
+            {
+                CRITLOG << "Unable to open Hauppauge device." << flush;
+                usbio.Close();
+                return -4;
+            }
 
-                do
+            if (vm.count("duration") && vm["duration"].as<int>() > 0)
+            {
+                if (dev.StartEncoding())
                 {
-#if 0
-                    if (dev.getInputAudioCodecChanged(audioCodec))
+                    chrono::steady_clock::time_point start =
+                        chrono::steady_clock::now();
+                    std::chrono::seconds elapsed = chrono::seconds(0);
+                    std::chrono::seconds duration =
+                        chrono::seconds(vm["duration"].as<int>());
+
+                    NOTICELOG << "Will capture for "
+                              << duration.count()
+                              << " seconds." << flush;
+
+                    do
                     {
-                        if (!dev.setAudioMode(audioCodec))
-                            ERRORLOG << "Error setting new audio mode!" << flush;
+                        elapsed = chrono::duration_cast<chrono::seconds>
+                                  (chrono::steady_clock::now() - start);
+                        PrintPosition(elapsed, duration);
+                        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
                     }
-#endif
-                    elapsed = chrono::duration_cast<chrono::seconds>
-                              (chrono::steady_clock::now() - start);
-                    PrintPosition(elapsed, duration);
-                    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+                    while (elapsed.count() < duration.count() && !g_done);
+                    cerr << "\n\n";
+                    dev.StopEncoding();
                 }
-                while (elapsed.count() < duration.count() && !g_done);
-                cerr << "\n\n";
-                dev.StopEncoding();
+            }
+            else
+            {
+                std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(2000);
+                if (dev.StartEncoding())
+                {
+                    while (!g_done) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                    }
+                    dev.StopEncoding();
+                }
             }
         }
-        else
+        catch (std::exception& e)
         {
-            std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(2000);
-            if (dev.StartEncoding())
-            {
-                while (!g_done) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-                }
-                dev.StopEncoding();
-            }
+            CRITLOG << "exception: " << e.what();
         }
 
         dev.Close();

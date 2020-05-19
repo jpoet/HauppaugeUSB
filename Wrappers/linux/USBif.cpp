@@ -566,6 +566,8 @@ int USBWrapper_t::bulkWrite(uint8_t num, const uint8_t *buf,
         ERRORLOG << "cannot bulk write to endpoint " << showbase
                  << setfill('0') << setw(2) << right << hex << num
                  << ": " << strMsg(r);
+        if (r == LIBUSB_ERROR_NO_DEVICE)
+            throw std::invalid_argument(strMsg(r));
         return retMsg(r);
     }
     return len;
