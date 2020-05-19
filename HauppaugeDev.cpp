@@ -120,9 +120,9 @@ void HauppaugeDev::configure(void)
     //RegistryAccess::writeDword("AudioCodecOutputFormat", m_params.audioCodec);
 //    RegistryAccess::writeDword("AudioCapMode", 5);
 
-    RegistryAccess::writeDword("AudioOutputSamplingRate",
-        m_params.audioSamplerate);
-    RegistryAccess::writeDword("AudioCapSampleRate", m_params.audioSamplerate);
+    // RegistryAccess::writeDword("AudioOutputSamplingRate",
+    //     m_params.audioSamplerate);
+    // RegistryAccess::writeDword("AudioCapSampleRate", m_params.audioSamplerate);
     RegistryAccess::writeDword("AudioOutputBitrate", m_params.audioBitrate);
 
 
@@ -486,6 +486,7 @@ bool HauppaugeDev::init_hdmi(void)
     receiverAudioParams_t ap;
     ap.sampleRate = 0; // default
     m_rxDev->getAudioParams(&ap);
+    ap.sampleRate = 48000; // default
 
     int vic = m_rxDev->getHDMIFormat();
     if (vic <= 0 || !m_encDev->setHDMIFormat(vic, ap.sampleRate))
@@ -859,8 +860,8 @@ void HauppaugeDev::audioMonitorLoop()
                 setAudioMode(audioCodec);
 
                 currentAudioCodec = audioCodec;
-                t1 = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(2000);
             }
+            t1 = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(2000);
         }
         pthread_yield();
     }
