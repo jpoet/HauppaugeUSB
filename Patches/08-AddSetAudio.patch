@@ -1,0 +1,132 @@
+diff -u -r a/Common/EncoderDev/encoderDev_DXT.cpp b/Common/EncoderDev/encoderDev_DXT.cpp
+--- a/Common/EncoderDev/encoderDev_DXT.cpp	2020-05-12 21:05:30.000000000 -0500
++++ b/Common/EncoderDev/encoderDev_DXT.cpp	2020-05-13 22:04:42.000000000 -0500
+@@ -72,7 +72,7 @@
+ 
+ bool encoderDev_DXT_t::setInputFormat(encoderSource_t source, encoderAudioInFormat_t audioFormat,
+ 		unsigned width, unsigned height, bool interlaced, float vFreq, float aspectRatio,
+-		float audioSampleRate) {
++		float audioSampleRate, int audioCodec) {
+ 	wrapLogDebug("encoderDev_DXT_t::setInputFormat(params...)");
+ 	wrapLogDebug("source: %d, %ux%u%c %fHz, AR: %f, audio: %s, SR: %fHz",
+ 		source, width, height, interlaced ? 'i' : 'p', vFreq, aspectRatio,
+@@ -107,13 +107,13 @@
+ 		case ENCAIF_AC3:
+ 			hapi->set_param(&_Param, "AudioCapSource", 3);         /* HDMI/SPDIF */
+ 			hapi->set_param(&_Param, "AudioPassthru", 1);
+-			hapi->set_param(&_Param, "AudioCodecOutputFormat", 2); /* AC3 */
++			hapi->set_param(&_Param, "AudioCodecOutputFormat", audioCodec); /* AC3 */
+ 			hapi->set_param(&_Param, "AudioStreamID", 189);        /* AC3/DTS */
+ 			break;
+ 		case ENCAIF_PCM:
+ 		default:
+ 			hapi->set_param(&_Param, "AudioPassthru", 0);
+-			hapi->set_param(&_Param, "AudioCodecOutputFormat", 3); /* AAC */
++			hapi->set_param(&_Param, "AudioCodecOutputFormat", audioCodec); /* AAC */
+ 			hapi->set_param(&_Param, "AudioStreamID", 192);        /* AAC/MPEG */
+ 			break;
+ 	}
+@@ -192,3 +192,53 @@
+ 	if(!hapi->HapiStop()) return false;
+ 	return true;
+ }
++
++/**
++ * Sets the audio mode to match the codec. Also restarts the encoder so that
++ * the changes take effect.
++ * @param audioCodec The codec to use. Can be one of the HAPI_AUDIO_CODEC enums from HapiCommon.h
++ * @return true for success, false otherwise
++ */
++bool encoderDev_DXT_t::setAudioMode(HAPI_AUDIO_CODEC audioCodec) {
++	wrapLogNotice("encoderDev_DXT_t::setAudioMode(params...)");
++	wrapLogNotice("audioCodec: %d", audioCodec);
++
++	CHapi *hapi = (CHapi*)m_hapi;
++
++	wrapLogNotice("encoderDev_DXT_t::setAudioMode() stopping hapi");
++	if(!hapi->HapiStop()) return false;
++
++	HAPI_SET_PARAM _Param;
++	memset(&_Param, 0, sizeof(_Param));
++	_Param.index = HAPI_SET_PARAM_TYPE_ENCODER;
++
++	hapi->set_param(&_Param, "AudioCodecOutputFormat", audioCodec);
++
++	switch(audioCodec) {
++		case HAPI_AUDIO_CODEC_AC3:
++		case HAPI_AUDIO_ENCODING_DTS:
++		case HAPI_AUDIO_ENCODING_DDPRO:
++			hapi->set_param(&_Param, "AudioPassthru", 1);
++			hapi->set_param(&_Param, "AudioStreamID", 189);        /* AC3/DTS */
++			break;
++		case HAPI_AUDIO_CODEC_AAC:
++		default:
++			hapi->set_param(&_Param, "AudioPassthru", 0);
++			hapi->set_param(&_Param, "AudioStreamID", 192);        /* AAC/MPEG */
++			break;
++	}
++
++	m_pmtVersion = (m_pmtVersion + 1) & 0x1f;
++	hapi->set_param(&_Param, "PMTVersion", m_pmtVersion);
++
++	if(!hapi->HapiParamSet(&_Param)) {
++		wrapLogError(" HapiParamSet() failed!!");
++		return false;
++	}
++
++	wrapLogNotice("encoderDev_DXT_t::setAudioMode() starting hapi");
++	if(!hapi->HapiStart()) return false;
++
++	return true;
++}
++
+diff -u -r a/Common/EncoderDev/encoderDev_DXT.h b/Common/EncoderDev/encoderDev_DXT.h
+--- a/Common/EncoderDev/encoderDev_DXT.h	2016-09-26 15:35:49.000000000 -0500
++++ b/Common/EncoderDev/encoderDev_DXT.h	2020-05-13 22:04:35.000000000 -0500
+@@ -3,6 +3,8 @@
+ 
+ #include "encoderDev.h"
+ #include "FX2Device.h"
++#include "HapiBaseType.h"
++#include "HapiCommon.h"
+ 
+ class encoderDev_DXT_t: public encoderDev_t {
+ protected:
+@@ -10,8 +12,10 @@
+ 	void *m_mchip;
+ 	void *m_hapi;
+ 
++	int m_pmtVersion;
++
+ public:
+-	encoderDev_DXT_t(FX2Device_t &fx2): m_fx2(fx2), m_mchip(NULL), m_hapi(NULL) {}
++	encoderDev_DXT_t(FX2Device_t &fx2): m_fx2(fx2), m_mchip(NULL), m_hapi(NULL), m_pmtVersion(0) {}
+ 	~encoderDev_DXT_t();
+ 
+ 	bool init();
+@@ -21,10 +25,12 @@
+ 
+ 	bool setInputFormat(encoderSource_t source, encoderAudioInFormat_t audioFormat,
+ 		unsigned width, unsigned height, bool interlaced, float vFreq, float aspectRatio,
+-		float audioSampleRate);
++		float audioSampleRate, int audioCodec);
+ 
+ 	bool setHDMIFormat(int hdmi_fmt, float audioSampleRate);
+ 	bool setHDMIAR(float aspectRatio);
++
++	bool setAudioMode(HAPI_AUDIO_CODEC audioCodec);
+ };
+ 
+ #endif
+diff -u -r a/Common/EncoderDev/encoderDev.h b/Common/EncoderDev/encoderDev.h
+--- a/Common/EncoderDev/encoderDev.h	2020-05-12 21:05:30.000000000 -0500
++++ b/Common/EncoderDev/encoderDev.h	2020-05-13 22:04:36.000000000 -0500
+@@ -43,7 +43,7 @@
+ 
+ 	virtual bool setInputFormat(encoderSource_t source, encoderAudioInFormat_t audioFormat,
+ 		unsigned width, unsigned height, bool interlaced, float vFreq, float aspectRatio,
+-		float audioSampleRate) = 0;
++		float audioSampleRate, int audioCodec) = 0;
+ 
+ 	virtual bool setHDMIFormat(int hdmi_fmt, float audioSampleRate) = 0;
+ 	virtual bool setHDMIAR(float aspectRatio) = 0;
