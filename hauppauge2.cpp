@@ -468,7 +468,8 @@ int main(int argc, char *argv[])
                         elapsed = chrono::duration_cast<chrono::seconds>
                                   (chrono::steady_clock::now() - start);
                         PrintPosition(elapsed, duration);
-                        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+                        std::this_thread::sleep_for
+                            (std::chrono::milliseconds(2000));
                     }
                     while (elapsed.count() < duration.count() && !g_done);
                     cerr << "\n\n";
@@ -477,11 +478,12 @@ int main(int argc, char *argv[])
             }
             else
             {
-                std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(2000);
                 if (dev.StartEncoding())
                 {
-                    while (!g_done) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                    while (!g_done)
+                    {
+                        std::this_thread::sleep_for
+                            (std::chrono::milliseconds(1000));
                     }
                     dev.StopEncoding();
                 }
