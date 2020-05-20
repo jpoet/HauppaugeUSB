@@ -237,39 +237,47 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
     encoderAudioInFormat_t audioFormat =
         (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3 ? ENCAIF_AC3
          : ENCAIF_AUTO);
+    HAPI_AUDIO_CODEC audioCodec;
 
-    //set_audio_format(audioFormat);
+    set_audio_format(audioFormat);
 
-    // TODO This seems to always work but it needs to be tested with
-    // more devices and inputs
-    set_audio_format(ENCAIF_AC3);
-
-    // Detect the current audio type
-    // Wait for up to 2 video frames to detect audio type
-    std::this_thread::sleep_for(std::chrono::milliseconds(66));
-    uint8_t bppc0, format, state;
-    int t = 66;
-    while (t > 0)
+    if (m_audio_CS8416 == nullptr)
     {
-        m_audio_CS8416->direct_io()->read
-            (audio_CS8416::DeviceIO::Reg::INTSTAT,
-             (uint8_t *)&state, sizeof(state));
-        m_audio_CS8416->direct_io()->read
-            (audio_CS8416::DeviceIO::Reg::BRSTPREAPC0,
-             (uint8_t *)&bppc0, sizeof(bppc0));
-        m_audio_CS8416->direct_io()->read
-            (audio_CS8416::DeviceIO::Reg::AFMTD,
-             (uint8_t *)&format, sizeof(format));
-        if (state & 1)
-            break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(3));
-        t -= 3;
+        audioCodec = (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3) ?
+                     HAPI_AUDIO_CODEC_AAC : m_params.audioCodec;
     }
+    else
+    {
+        // Detect the current audio type
+        // Wait for up to 2 video frames to detect audio type
+        std::this_thread::sleep_for(std::chrono::milliseconds(66));
+        uint8_t bppc0, format, state;
+        int t = 66;
+        while (t > 0)
+        {
+            m_audio_CS8416->direct_io()->read
+                (audio_CS8416::DeviceIO::Reg::INTSTAT,
+                 (uint8_t *)&state, sizeof(state));
 
-    HAPI_AUDIO_CODEC audioCodec = getAudioCodec(format, bppc0);
-    currentAudioCodec = audioCodec;
-    audioFormat = audioCodec == HAPI_AUDIO_CODEC_AAC? ENCAIF_AUTO : ENCAIF_AC3;
+            // Do the next two reads need to be INSIDE this loop?
+            m_audio_CS8416->direct_io()->read
+                (audio_CS8416::DeviceIO::Reg::BRSTPREAPC0,
+                 (uint8_t *)&bppc0, sizeof(bppc0));
+            m_audio_CS8416->direct_io()->read
+                (audio_CS8416::DeviceIO::Reg::AFMTD,
+                 (uint8_t *)&format, sizeof(format));
 
+            if (state & 1)
+                break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(3));
+            t -= 3;
+        }
+
+        audioCodec = getAudioCodec(format, bppc0);
+        currentAudioCodec = audioCodec;
+        audioFormat = audioCodec == HAPI_AUDIO_CODEC_AAC ?
+                      ENCAIF_AUTO : ENCAIF_AC3;
+    }
     NOTICELOG << "Detected audioCodec: " << audioCodec;
 
     if (m_params.videoCodingMode >= HAPI_CODING_MODE_FIELD &&

@@ -54,7 +54,7 @@ class HauppaugeDev
     std::string ErrorString(void) const { return m_errmsg; }
     bool operator!(void) const { return m_err; }
 
-    audio_CS8416       *m_audio_CS8416;
+    audio_CS8416       *m_audio_CS8416 {nullptr};
 
     bool getInputAudioCodecChanged(HAPI_AUDIO_CODEC & audioCodec);
     bool setAudioMode(HAPI_AUDIO_CODEC audioCodec);
