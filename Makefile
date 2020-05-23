@@ -32,15 +32,15 @@ include ./Hauppauge/TestApp/build-ADV7842/Makefile
 
 REC_CXX = g++
 REC_CXXFLAGS := -g -c -Wall -std=c++11 -fdiagnostics-color -DBOOST_LOG_DYN_LINK ${CFLAGS}
-REC_LDFLAGS =
+REC_LDFLAGS = -lswscale -lavdevice -lavformat -lavcodec -lavutil
 
 #	        `pkg-config --libs libsystemd` \
 
 REC_LDFLAGS  += `pkg-config --libs libusb-1.0` \
 	        -lpthread
 
-REC_SOURCES = Logger.cpp Common.cpp MythTV.cpp FlipInterlacedFields.cpp HauppaugeDev.cpp hauppauge2.cpp
-REC_HEADERS = Logger.h Common.h MythTV.h FlipInterlacedFields.h HauppaugeDev.h
+REC_SOURCES = Logger.cpp Common.cpp MythTV.cpp FlipInterlacedFields.cpp HauppaugeDev.cpp hauppauge2.cpp Transcoder.cpp StreamBuffer.cpp AudioDecoder.cpp StreamWriter.cpp AudioBuffer.cpp AudioEncoder.cpp
+REC_HEADERS = Logger.h Common.h MythTV.h FlipInterlacedFields.h HauppaugeDev.h Transcoder.h StreamBuffer.h AudioDecoder.h StreamWriter.h AudioBuffer.h AudioEncoder.h
 REC_OBJECTS = $(REC_SOURCES:.cpp=.o)
 
 CONF = etc/sample.conf

@@ -4,3 +4,9 @@ hdpvr2_ver7
 *.cfg
 FX2Firmware.cpp
 mchip_binary.cpp
+*.o
+*.log
+Hauppauge
+*.a
+.vscode
+hauppauge2

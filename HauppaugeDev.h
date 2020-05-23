@@ -24,10 +24,15 @@
 #include "USBif.h"
 #include "FX2Device.h"
 #include "receiver_ADV7842.h"
+#include "audio_CS8416.h"
 #include "Common.h"
 
 #include <string>
+#include <pthread.h>
 
+#ifdef DECLARE_THREAD_START
+static void * thread_start(void *);
+#endif
 class HauppaugeDev
 {
   public:
@@ -49,6 +54,11 @@ class HauppaugeDev
     std::string ErrorString(void) const { return m_errmsg; }
     bool operator!(void) const { return m_err; }
 
+    audio_CS8416       *m_audio_CS8416;
+
+    bool getInputAudioCodecChanged(HAPI_AUDIO_CODEC & audioCodec);
+    bool setAudioMode(HAPI_AUDIO_CODEC audioCodec);
+
   protected:
     void configure(void);
     bool set_digital_audio(bool optical);
@@ -65,6 +75,10 @@ class HauppaugeDev
     bool open_file(const std::string & file_name);
     void log_ports(void);
 
+    friend void * thread_start(void *);
+    void audioMonitorLoop();
+    HAPI_AUDIO_CODEC getAudioCodec(uint8_t format, uint8_t bppc0);
+
   private:
     int                 m_fd;
 
@@ -76,6 +90,10 @@ class HauppaugeDev
 
     std::string         m_errmsg;
     bool                m_err;
+
+    pthread_t m_thread;
+    bool volatile exitAudioMonitorLoop;
+    HAPI_AUDIO_CODEC currentAudioCodec;
 };
 
 #endif

@@ -24,6 +24,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/token_functions.hpp>
 
+#include "Transcoder.h"
 #include "Common.h"
 #include "HauppaugeDev.h"
 #include "MythTV.h"
@@ -59,6 +60,7 @@ static int evtWait()
     sigset_t ss;
     sigemptyset(&ss);
     sigaddset(&ss, SIGINT);
+    pthread_sigmask(SIG_BLOCK, &ss, NULL);
     int s;
     if (sigwait(&ss, &s) != 0)
         return 0;
@@ -434,7 +436,9 @@ int main(int argc, char *argv[])
         if (!usbio.Open(params.serial))
             return -3;
 
-        if (!dev.Open(usbio, (params.audioCodec == HAPI_AUDIO_CODEC_AC3)))
+        Transcoder transcoder("output.ts");
+        if (!dev.Open(usbio, (params.audioCodec == HAPI_AUDIO_CODEC_AC3), transcoder))
+//        if (!dev.Open(usbio, (params.audioCodec == HAPI_AUDIO_CODEC_AC3)))
         {
             usbio.Close();
             return -4;
