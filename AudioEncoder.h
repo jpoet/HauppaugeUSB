@@ -1,18 +1,18 @@
 #ifndef AudioEncoder_h_
 #define AudioEncoder_h_
 
-extern "C" 
-{
-    #include <libavformat/avformat.h>
-    #include <libavcodec/avcodec.h>
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
 }
 
 class Trasnscoder;
 
-class AudioEncoder 
+class AudioEncoder
 {
     friend class Transcoder;
-private:
+
+  private:
     AVCodecID m_codecId;
     AVCodecContext * m_aContext;
     AVPacket m_pkt;
@@ -21,9 +21,9 @@ private:
     ~AudioEncoder();
 
     bool initEncoder(AVFormatContext * avFormatContext);
-    bool putFrame(AVFrame * frame);
-    AVPacket * getNextPacket();
-    void releasePacket(AVPacket * packet);
+    bool PutFrame(AVFrame * frame);
+    AVPacket * GetNextPacket();
+    void ReleasePacket(AVPacket * packet);
 };
 
 #endif

@@ -2,7 +2,7 @@
 #define StreamWriter_h_
 
 extern "C" {
-    #include <libavformat/avformat.h>
+#include <libavformat/avformat.h>
 }
 
 #include "Hauppauge/Common/AVOutput.h"
@@ -15,7 +15,8 @@ class Transcoder;
 class StreamWriter
 {
     friend class Transcoder;
-private:
+
+  private:
     Transcoder * m_transcoder;
     std::string m_filename;
     DataTransfer::callback_t * m_cb;
@@ -25,13 +26,15 @@ private:
     bool m_initialized;
     int m_fd;
 
-    StreamWriter(Transcoder * transcoder, const std::string& filename = std::string(), DataTransfer::callback_t * cb=nullptr);
+    StreamWriter(Transcoder * transcoder,
+                 const std::string & filename = std::string(),
+                 DataTransfer::callback_t * cb = nullptr);
     ~StreamWriter();
 
-    bool writePacket(AVPacket * packet);
+    bool WritePacket(AVPacket * packet);
 
-public:    
-    int writeBuffer(uint8_t * buf, int buf_size);
+  public:
+    int WriteBuffer(uint8_t * buf, int buf_size);
 };
 
 #endif

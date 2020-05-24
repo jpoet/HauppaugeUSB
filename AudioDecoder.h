@@ -1,29 +1,30 @@
 #ifndef AudioDecoder_h_
 #define AudioDecoder_h_
 
-extern "C" 
-{
-    #include <libavformat/avformat.h>
-    #include <libavcodec/avcodec.h>
+extern "C" {
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
 }
 
 class Trasnscoder;
 
-class AudioDecoder 
+class AudioDecoder
 {
     friend class Transcoder;
-private:
+
+  private:
     AVCodecID m_codecId;
     AVCodecContext * m_aContext;
 
     AudioDecoder();
     ~AudioDecoder();
 
-    bool isNewCodec(AVCodecContext * aContext);
-    bool initDecoder(AVFormatContext * avFormatContext, AVCodecParameters * codecParams);
-    bool putPacket(AVPacket * packet);
-    AVFrame * getNextFrame();
-    void releaseFrame(AVFrame * frame);
+    bool IsNewCodec(AVCodecContext * aContext);
+    bool InitDecoder(AVFormatContext * avFormatContext,
+                     AVCodecParameters * codecParams);
+    bool PutPacket(AVPacket * packet);
+    AVFrame * GetNextFrame();
+    void ReleaseFrame(AVFrame * frame);
 };
 
 #endif

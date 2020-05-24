@@ -4,19 +4,22 @@
 AudioDecoder::AudioDecoder()
 : m_codecId(AV_CODEC_ID_NONE)
 , m_aContext(nullptr)
-{}
+{
+}
 
 AudioDecoder::~AudioDecoder()
 {
-    //delete m_aContext; // Don't delete this, it will get closed when its parent AVFormat is freed
+    // delete m_aContext; // Don't delete this, it will get closed when its
+    // parent AVFormat is freed
 }
 
-bool AudioDecoder::isNewCodec(AVCodecContext * aContext)
+bool AudioDecoder::IsNewCodec(AVCodecContext * aContext)
 {
     return (aContext->codec_id != m_codecId);
 }
 
-bool AudioDecoder::initDecoder(AVFormatContext * avFormatContext, AVCodecParameters * codecParams)
+bool AudioDecoder::InitDecoder(AVFormatContext * avFormatContext,
+                               AVCodecParameters * codecParams)
 {
     int ret;
 
@@ -26,7 +29,7 @@ bool AudioDecoder::initDecoder(AVFormatContext * avFormatContext, AVCodecParamet
     avcodec_parameters_to_context(m_aContext, codecParams);
 
     ret = avcodec_open2(m_aContext, codec, nullptr);
-    if (ret < 0) 
+    if (ret < 0)
     {
         ERRORLOG << "Failed to open codec for stream: " << ret;
         return false;
@@ -38,11 +41,11 @@ bool AudioDecoder::initDecoder(AVFormatContext * avFormatContext, AVCodecParamet
     return true;
 }
 
-bool AudioDecoder::putPacket(AVPacket * packet) 
+bool AudioDecoder::PutPacket(AVPacket * packet)
 {
     int ret;
     ret = avcodec_send_packet(m_aContext, packet);
-    if (ret < 0) 
+    if (ret < 0)
     {
         ERRORLOG << "Decoding failed: " << ret;
         return false;
@@ -51,11 +54,11 @@ bool AudioDecoder::putPacket(AVPacket * packet)
     return true;
 }
 
-AVFrame * AudioDecoder::getNextFrame()
+AVFrame * AudioDecoder::GetNextFrame()
 {
-    AVFrame * frame =  av_frame_alloc();
+    AVFrame * frame = av_frame_alloc();
     int ret = avcodec_receive_frame(m_aContext, frame);
-    if (ret < 0) 
+    if (ret < 0)
     {
         if (ret != -EAGAIN)
             ERRORLOG << "Decoding failed";
@@ -66,7 +69,7 @@ AVFrame * AudioDecoder::getNextFrame()
     return frame;
 }
 
-void AudioDecoder::releaseFrame(AVFrame * frame)
+void AudioDecoder::ReleaseFrame(AVFrame * frame)
 {
     av_frame_free(&frame);
 }

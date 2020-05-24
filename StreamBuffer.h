@@ -10,14 +10,14 @@ extern "C" {
 class Transcoder;
 class StreamWriter;
 
-class StreamBuffer 
+class StreamBuffer
 {
     friend class Transcoder;
     friend class StreamWriter;
 
-private:
+  private:
     typedef struct _block {
-        struct _block *next;
+        struct _block * next;
         unsigned int length;
         unsigned int allocated;
         unsigned int offset;
@@ -28,14 +28,14 @@ private:
 
     Transcoder * m_transcoder;
 
-    unsigned int maxAllocated;
-    int volatile bytesBuffered;
+    unsigned int m_maxAllocated;
+    int volatile m_bytesBuffered;
 
-    volatile block_t * headFree;   // The first free cached block
-    volatile block_t * volatile * tailFree; // The last freed cached block
+    volatile block_t * m_headFree;            // The first free cached block
+    volatile block_t * volatile * m_tailFree; // The last freed cached block
 
-    volatile block_t * head;   // The oldest buffered block. We read from this position
-    volatile block_t * volatile * tail; // The newest buffered block, We write to this position
+    volatile block_t * m_head;            // The oldest buffered block.
+    volatile block_t * volatile * m_tail; // The newest buffered block.
 
     AVInputFormat * m_iFormat;
     AVIOContext * m_avioContext;
@@ -46,21 +46,21 @@ private:
 
     AVPacket m_pkt;
 
-    block_t * getBlock(unsigned int blocksize);
+    block_t * GetBlock(unsigned int blocksize);
 
-    void freeBlock(block_t * block);
+    void FreeBlock(block_t * block);
 
-    void putData(void * ptr, size_t length);
+    void PutData(void * ptr, size_t length);
 
-    AVPacket * flush();
-    AVPacket * getNextPacket(bool flush=false);
-    void releasePacket(AVPacket * packet);
+    AVPacket * Flush();
+    AVPacket * GetNextPacket(bool flush = false);
+    void ReleasePacket(AVPacket * packet);
 
     StreamBuffer(Transcoder * transcoder);
     ~StreamBuffer();
 
-public:
-    int readPacket(uint8_t * buf, int buf_size);
+  public:
+    int ReadPacket(uint8_t * buf, int buf_size);
 };
 
 #endif

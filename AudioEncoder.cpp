@@ -7,7 +7,7 @@ AudioEncoder::AudioEncoder()
 {
     // Find the AC3 encoder
     AVCodec * ac3encoder = avcodec_find_encoder(AV_CODEC_ID_AC3);
-    if (!ac3encoder) 
+    if (!ac3encoder)
     {
         ERRORLOG << "Unable to find encoder AC3";
         return;
@@ -26,7 +26,7 @@ AudioEncoder::AudioEncoder()
     m_aContext->sample_fmt = AV_SAMPLE_FMT_FLTP;
 
     // Open the encoder
-    if (avcodec_open2(m_aContext, ac3encoder, nullptr) < 0) 
+    if (avcodec_open2(m_aContext, ac3encoder, nullptr) < 0)
     {
         ERRORLOG << "Unable to open AC3 EncoderContext";
         avcodec_free_context(&m_aContext);
@@ -39,10 +39,10 @@ AudioEncoder::~AudioEncoder()
     avcodec_free_context(&m_aContext);
 }
 
-bool AudioEncoder::putFrame(AVFrame * frame) 
+bool AudioEncoder::PutFrame(AVFrame * frame)
 {
     int ret = avcodec_send_frame(m_aContext, frame);
-    if (ret < 0) 
+    if (ret < 0)
     {
         ERRORLOG << "Unable to encode audio frame: " << ret;
         return false;
@@ -51,18 +51,18 @@ bool AudioEncoder::putFrame(AVFrame * frame)
     return true;
 }
 
-AVPacket * AudioEncoder::getNextPacket()
+AVPacket * AudioEncoder::GetNextPacket()
 {
     int ret;
 
     av_init_packet(&m_pkt);
     ret = avcodec_receive_packet(m_aContext, &m_pkt);
-    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) 
+    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
     {
         DEBUGLOG << "Nothing to do right now";
         return nullptr;
     }
-    else if (ret < 0) 
+    else if (ret < 0)
     {
         ERRORLOG << "Unable to receive frame from encoder: " << ret;
         return nullptr;
@@ -73,7 +73,7 @@ AVPacket * AudioEncoder::getNextPacket()
     return &m_pkt;
 }
 
-void AudioEncoder::releasePacket(AVPacket * pkt)
+void AudioEncoder::ReleasePacket(AVPacket * pkt)
 {
     av_packet_unref(pkt);
 }

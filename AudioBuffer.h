@@ -3,22 +3,21 @@
 
 #include <stdint.h>
 
-extern "C" 
-{
+extern "C" {
 #include <libavformat/avformat.h>
 }
 
 class Transcoder;
 class StreamWriter;
 
-class AudioBuffer 
+class AudioBuffer
 {
     friend class Transcoder;
     friend class StreamWriter;
 
-private:
+  private:
     typedef struct _block {
-        struct _block *next;
+        struct _block * next;
         unsigned int length;
         unsigned int allocated;
         unsigned int offset;
@@ -29,26 +28,26 @@ private:
 #pragma pack(pop)
     } block_t;
 
-    unsigned int maxAllocated;
-    int volatile bytesBuffered;
+    unsigned int m_maxAllocated;
+    int volatile m_bytesBuffered;
 
-    volatile block_t * headFree;   // The first free cached block
-    volatile block_t * volatile * tailFree; // The last freed cached block
+    volatile block_t * m_headFree;            // The first free cached block
+    volatile block_t * volatile * m_tailFree; // The last freed cached block
 
-    volatile block_t * head;   // The oldest buffered block. We read from this position
-    volatile block_t * volatile * tail; // The newest buffered block, We write to this position
+    volatile block_t * m_head;            // The oldest buffered block.
+    volatile block_t * volatile * m_tail; // The newest buffered block.
 
-    void reset();
+    void Reset();
 
-    block_t * getBlock(unsigned int blocksize);
+    block_t * GetBlock(unsigned int blocksize);
 
-    void freeBlock(block_t * block);
+    void FreeBlock(block_t * block);
 
-    void putFrame(AVFrame * frame);
+    void PutFrame(AVFrame * frame);
 
-    AVFrame * getFrame(bool flush=false);
+    AVFrame * GetFrame(bool flush = false);
 
-    void releaseFrame(AVFrame * frame);
+    void ReleaseFrame(AVFrame * frame);
 
     AudioBuffer();
     ~AudioBuffer();

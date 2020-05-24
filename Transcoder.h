@@ -4,18 +4,19 @@
 #include <stdint.h>
 #include <string>
 
-#include "StreamBuffer.h"
-#include "AudioDecoder.h"
-#include "StreamWriter.h"
 #include "AudioBuffer.h"
+#include "AudioDecoder.h"
 #include "AudioEncoder.h"
 #include "Hauppauge/Common/AVOutput.h"
+#include "StreamBuffer.h"
+#include "StreamWriter.h"
 
-class Transcoder 
+class Transcoder
 {
     friend class StreamBuffer;
     friend class StreamWriter;
-private:
+
+  private:
     StreamBuffer * m_streamBuffer;
     AudioDecoder * m_audioDecoder;
     StreamWriter * m_streamWriter;
@@ -27,21 +28,20 @@ private:
     bool m_flushing;
     int m_curAudioStreamIndex;
 
-    void streamReset();
-    void streamFlushed();
+    void StreamReset();
+    void StreamFlushed();
 
-    void handleAudioPacket(AVPacket * pkt);
+    void HandleAudioPacket(AVPacket * pkt);
 
-public:
-    Transcoder(const std::string& filename = std::string(), DataTransfer::callback_t * cb=nullptr);
+  public:
+    Transcoder(const std::string & filename = std::string(),
+               DataTransfer::callback_t * cb = nullptr);
     ~Transcoder();
 
-    void acceptData(void * ptr, size_t length);
-    void processData();
-    DataTransfer::callback_t * getCallback() {
-        return &m_cb;
-    }
-    operator DataTransfer::callback_t * () { return &m_cb; }
+    void AcceptData(void * ptr, size_t length);
+    void ProcessData();
+    DataTransfer::callback_t * GetCallback() { return &m_cb; }
+    operator DataTransfer::callback_t *() { return &m_cb; }
 };
 
 #endif
