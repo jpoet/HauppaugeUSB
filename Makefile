@@ -21,7 +21,9 @@ override INC = $(OS_INC) -I.. -I$(TOP)/Common -I./Wrappers/$(OS)	\
 -I$(TOP)/Common/Rx -I$(TOP)/Common/EncoderDev				\
 -I$(TOP)/Common/EncoderDev/HAPIHost					\
 -I$(TOP)/Common/EncoderDev/HAPIHost/MChip                               \
-`pkg-config --cflags libusb-1.0`
+`pkg-config --cflags libusb-1.0` \
+`pkg-config --cflags libavformat`
+
 
 override OBJS_WRAPPERS = log.o baseif.o registryif.o USBif.o I2Cif.o
 override OS_INC := `pkg-config --cflags libusb-1.0`
@@ -37,6 +39,7 @@ REC_LDFLAGS = -lswscale -lavdevice -lavformat -lavcodec -lavutil
 #	        `pkg-config --libs libsystemd` \
 
 REC_LDFLAGS  += `pkg-config --libs libusb-1.0` \
+		`pkg-config --libs libavformat` \
 	        -lpthread
 
 REC_SOURCES = Logger.cpp Common.cpp MythTV.cpp FlipInterlacedFields.cpp HauppaugeDev.cpp hauppauge2.cpp Transcoder.cpp StreamBuffer.cpp AudioDecoder.cpp StreamWriter.cpp AudioBuffer.cpp AudioEncoder.cpp
