@@ -35,7 +35,7 @@ class Transcoder
 
   public:
     Transcoder(const std::string & filename = std::string(),
-               DataTransfer::callback_t * cb = nullptr);
+               DataTransfer::callback_t * cb = nullptr, bool upmix2to51 = true);
     ~Transcoder();
 
     void AcceptData(void * ptr, size_t length);

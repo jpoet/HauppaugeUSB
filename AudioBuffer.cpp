@@ -1,14 +1,25 @@
 #include "AudioBuffer.h"
 #include "Logger.h"
 
-AudioBuffer::AudioBuffer()
+#define MINUS3DB (1.0 / 1.414213)
+
+AudioBuffer::AudioBuffer(bool upmix2to51)
 : m_maxAllocated(0)
 , m_bytesBuffered(0)
 , m_headFree(nullptr)
 , m_tailFree(&m_headFree)
 , m_head(nullptr)
 , m_tail(&m_head)
+, m_delay(48000, 12)
+, m_filterCenter(4000.0 / 48000.0, .5)
+, m_filterLfe(200.0 / 48000.0, .5)
+, m_filterSurround(7000.0 / 48000.0, .5)
+, m_filterLeft(10000.0 / 48000.0, 0.1)
+, m_filterRight(10000.0 / 48000.0, 0.1)
+, m_phaseShifter(PHASEHIFTER_FILTER_LENGTH)
+, m_upmix2to51(upmix2to51)
 {
+    m_tempbuf = new uint8_t[(1536 + PHASEHIFTER_FILTER_LENGTH) * sizeof(float)];
 }
 
 AudioBuffer::~AudioBuffer()
@@ -26,6 +37,8 @@ AudioBuffer::~AudioBuffer()
         delete m_head;
         m_head = b;
     }
+
+    delete m_tempbuf;
 }
 
 void AudioBuffer::Reset()
@@ -39,13 +52,21 @@ void AudioBuffer::Reset()
         m_head->offset = m_head->length;
         FreeBlock(block);
     }
+
+    m_filterLeft.Reset();
+    m_filterRight.Reset();
+    m_filterCenter.Reset();
+    m_filterLfe.Reset();
+    m_filterSurround.Reset();
+    m_phaseShifter.Reset();
+    m_delay.Reset();
 }
 
 AudioBuffer::block_t * AudioBuffer::GetBlock(unsigned int blocksize)
 {
     block_t * block;
 
-    blocksize = (blocksize + 31) & ~32;
+    blocksize = (blocksize + 31) & ~31;
     unsigned int allocated = (blocksize * 8); // Align to 128-byte page boundary
 
     // We can't remove the last one, it has to stay so tailFree stays valid
@@ -74,6 +95,8 @@ AudioBuffer::block_t * AudioBuffer::GetBlock(unsigned int blocksize)
     for (int i = 0; i < 8; i++)
         block->bufs[i] = block->data + i * blocksize;
 
+    block->applyPhase = false;
+
     return block;
 }
 
@@ -99,10 +122,31 @@ void AudioBuffer::PutFrame(AVFrame * frame)
     {
     case AV_SAMPLE_FMT_FLTP:
         block = GetBlock(frame->linesize[0]);
-        for (int i = 0; i < frame->channels; i++)
-            memcpy(block->bufs[i], frame->data[i], bs);
-        for (int i = frame->channels; i < 6; i++)
-            memset(block->bufs[i], 0, bs);
+        if (frame->channels == 2 && m_upmix2to51)
+        {
+            // upmix stereo using "Dolby Surround"
+            block->applyPhase = true; // apply phase shift during read
+            for (int i = 0; i < frame->nb_samples; i++)
+            {
+                float l = *((float *)(frame->data[0]) + i);
+                float r = *((float *)(frame->data[1]) + i);
+                *((float *)(block->bufs[0]) + i) = m_filterLeft.Process(l);
+                *((float *)(block->bufs[1]) + i) = m_filterRight.Process(r);
+                *((float *)(block->bufs[2]) + i) =
+                    m_filterCenter.Process(l + r) * MINUS3DB;
+                *((float *)(block->bufs[3]) + i) = m_filterLfe.Process(l + r);
+                *((float *)(block->bufs[4]) + i) = *((float *)(block->bufs[5])
+                                                     + i) =
+                    m_delay.Process(m_filterSurround.Process(l - r) * MINUS3DB);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < frame->channels; i++)
+                memcpy(block->bufs[i], frame->data[i], bs);
+            for (int i = frame->channels; i < 6; i++)
+                memset(block->bufs[i], 0, bs);
+        }
         break;
     case AV_SAMPLE_FMT_S16: // Another popular format
         block = GetBlock(bs);
@@ -157,7 +201,11 @@ AVFrame * AudioBuffer::GetFrame(bool flush)
     }
 
     int bs = 1536 * sizeof(float);
-    if (m_bytesBuffered >= bs || (flush && m_bytesBuffered))
+    int peekAmountBytes = 0;
+    if (m_head && m_head->applyPhase)
+        peekAmountBytes = m_phaseShifter.GetFilterLength() / 2
+                          * sizeof(float); // Have to provide filt/2 extra data
+    if (m_bytesBuffered >= (bs + peekAmountBytes) || (flush && m_bytesBuffered))
     {
         AVFrame * frame = av_frame_alloc();
         if (!frame)
@@ -181,9 +229,22 @@ AVFrame * AudioBuffer::GetFrame(bool flush)
             int l = b->length - b->offset;
             if (l > size)
                 l = size;
-            for (int i = 0; i < 6; i++)
-                memcpy(frame->data[i] + c,
-                       (const void *)(b->bufs[i] + b->offset), l);
+            if (peekAmountBytes)
+            {
+                // Copy the first 4 channels
+                for (int i = 0; i < 4; i++)
+                    memcpy(frame->data[i] + c,
+                           (const void *)(b->bufs[i] + b->offset), l);
+                // For the surround, copy into a separate buffer
+                memcpy(m_tempbuf + c, (const void *)(b->bufs[4] + b->offset),
+                       l);
+            }
+            else
+            {
+                for (int i = 0; i < 6; i++)
+                    memcpy(frame->data[i] + c,
+                           (const void *)(b->bufs[i] + b->offset), l);
+            }
             b->offset += l;
             size -= l;
             c += l;
@@ -199,6 +260,35 @@ AVFrame * AudioBuffer::GetFrame(bool flush)
         {
             for (int i = 0; i < 6; i++)
                 memset(frame->data[i] + c, 0, bs - c);
+        }
+        else if (peekAmountBytes)
+        {
+            // peek ahead for the phase shift
+            int peekSize = peekAmountBytes;
+            b = (block_t *)m_head;
+            unsigned int boffset = b ? b->offset : 0;
+            while (peekSize && b && (boffset < b->length || b->next))
+            {
+                int l = b->length - boffset;
+                if (l > peekSize)
+                    l = peekSize;
+                memcpy(m_tempbuf + c, (const void *)(b->bufs[4] + boffset), l);
+                boffset += l;
+                peekSize -= l;
+                c += l;
+                if (boffset >= b->length)
+                {
+                    b = b->next;
+                    boffset = 0;
+                }
+            }
+            if (c < (bs + peekAmountBytes))
+                memset(m_tempbuf + c, 0, (bs + peekAmountBytes) - c);
+            // memcpy(frame->data[4], m_tempbuf, 1536 * sizeof(float));
+            c = m_phaseShifter.Process((float *)m_tempbuf,
+                                       (float *)frame->data[4],
+                                       (bs + peekAmountBytes) / sizeof(float));
+            memcpy(frame->data[5], frame->data[4], 1536 * sizeof(float));
         }
 
         return frame;

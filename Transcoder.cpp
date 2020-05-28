@@ -30,11 +30,11 @@
  * must call the ProcessData method periodically.
  */
 Transcoder::Transcoder(const std::string & output_filename,
-                       DataTransfer::callback_t * cb)
+                       DataTransfer::callback_t * cb, bool upmix2to51)
 : m_streamBuffer(new StreamBuffer(this))
 , m_audioDecoder(nullptr)
 , m_streamWriter(new StreamWriter(this, output_filename, cb))
-, m_audioBuffer(new AudioBuffer())
+, m_audioBuffer(new AudioBuffer(upmix2to51))
 , m_audioEncoder(new AudioEncoder())
 , m_output_filename(output_filename)
 , m_client(cb)

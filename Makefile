@@ -22,7 +22,7 @@ override INC = $(OS_INC) -I.. -I$(TOP)/Common -I./Wrappers/$(OS)	\
 -I$(TOP)/Common/EncoderDev/HAPIHost					\
 -I$(TOP)/Common/EncoderDev/HAPIHost/MChip                               \
 `pkg-config --cflags libusb-1.0` \
-`pkg-config --cflags libavformat`
+`pkg-config --cflags libavformat` 
 
 
 override OBJS_WRAPPERS = log.o baseif.o registryif.o USBif.o I2Cif.o
@@ -43,7 +43,7 @@ REC_LDFLAGS  += `pkg-config --libs libusb-1.0` \
 	        -lpthread
 
 REC_SOURCES = Logger.cpp Common.cpp MythTV.cpp FlipInterlacedFields.cpp HauppaugeDev.cpp hauppauge2.cpp Transcoder.cpp StreamBuffer.cpp AudioDecoder.cpp StreamWriter.cpp AudioBuffer.cpp AudioEncoder.cpp
-REC_HEADERS = Logger.h Common.h MythTV.h FlipInterlacedFields.h HauppaugeDev.h Transcoder.h StreamBuffer.h AudioDecoder.h StreamWriter.h AudioBuffer.h AudioEncoder.h
+REC_HEADERS = Logger.h Common.h MythTV.h FlipInterlacedFields.h HauppaugeDev.h Transcoder.h StreamBuffer.h AudioDecoder.h StreamWriter.h AudioBuffer.h AudioEncoder.h PhaseShifter.h AllpassFilter.h LowpassFilter.h AudioDelay.h
 REC_OBJECTS = $(REC_SOURCES:.cpp=.o)
 
 CONF = etc/sample.conf
