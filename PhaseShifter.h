@@ -3,6 +3,7 @@
 
 #include <math.h>
 #include <string.h>
+#include <xmmintrin.h>
 
 class PhaseShifter
 {
@@ -11,6 +12,7 @@ class PhaseShifter
     float * m_hist;
     int m_filtLen;
     int m_filtLen2; // keep this because we need filtLength/2 pretty often
+    int m_bufsize;
 
     float * AlignedNew(int floats)
     {
@@ -28,16 +30,17 @@ class PhaseShifter
     }
 
   public:
-    PhaseShifter(int filterLength)
+    PhaseShifter(int filterLength, int bufsize)
     : m_filtLen(filterLength)
     , m_filtLen2(filterLength / 2)
+    , m_bufsize(bufsize)
     {
         m_filt = AlignedNew(m_filtLen);
 
         for (int i = 1; i <= m_filtLen; i++)
             m_filt[m_filtLen - i] = 1 / ((i - m_filtLen2) - 0.5) / M_PI;
 
-        m_hist = AlignedNew(m_filtLen2);
+        m_hist = AlignedNew(m_filtLen2 + bufsize + m_filtLen2);
         memset(m_hist, 0, sizeof(float) * m_filtLen2);
     }
 
@@ -51,37 +54,21 @@ class PhaseShifter
 
     void Reset() { memset(m_hist, 0, sizeof(float) * m_filtLen2); }
 
+    void * GetBuffer() { return m_hist + m_filtLen2; }
+    int GetBufferSize() { return m_bufsize; }
+    int GetPeekSize() { return m_filtLen2; }
+
     // Need to be provided lfilt/2 samples beyond our window as a peek
     // ahead for the filter
-    int Process(float * in, float * out, int npt)
+    int Process(float * out)
     {
         int i, l;
         double yt;
         float * p = out;
 
-        int hc = m_filtLen2;
-        int ic = m_filtLen2;
-        for (l = 0; l < m_filtLen2; l++)
+        for (l = 0; l < m_bufsize; l++)
         {
-            // take hc samples from history
-            // take ic from input
-            float * f = m_filt;
-            float * h = &m_hist[l];
-            float * s = in;
-            yt = *h++ * *f++;
-            for (i = 1; i < hc; i++)
-                yt += *h++ * *f++;
-            for (i = 0; i < ic; i++)
-                yt += *s++ * *f++;
-            *p++ = yt;
-            ic++;
-            hc--;
-        }
-
-        // Second case is when our window is completely in the input vector
-        for (l = 0; l < npt - m_filtLen; l++)
-        {
-            float * s = &in[l];
+            float * s = &m_hist[l];
             float * f = m_filt;
             yt = *s++ * *f++;
             for (i = 1; i < m_filtLen; i++)
@@ -89,8 +76,8 @@ class PhaseShifter
             *p++ = yt;
         }
 
-        // save off last lifilt/2 of data (not the extra part)
-        memcpy(m_hist, in + npt - m_filtLen, m_filtLen2 * sizeof(float));
+        // Save off the last portion to use as history for the next window
+        memcpy(m_hist, m_hist + m_bufsize, m_filtLen2 * sizeof(float));
 
         return p - out;
     }

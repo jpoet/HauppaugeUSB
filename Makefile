@@ -33,7 +33,7 @@ override OS_INC := `pkg-config --cflags libusb-1.0`
 include ./Hauppauge/TestApp/build-ADV7842/Makefile
 
 REC_CXX = g++
-REC_CXXFLAGS := -g -c -Wall -std=c++11 -fdiagnostics-color -DBOOST_LOG_DYN_LINK ${CFLAGS}
+REC_CXXFLAGS := -g -c -Wall -std=c++11 -fdiagnostics-color -DBOOST_LOG_DYN_LINK ${CFLAGS} -ffast-math
 REC_LDFLAGS = -lswscale -lavdevice -lavformat -lavcodec -lavutil
 
 #	        `pkg-config --libs libsystemd` \

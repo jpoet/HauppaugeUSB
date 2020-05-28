@@ -867,7 +867,7 @@ void HauppaugeDev::audioMonitorLoop()
                 t1 = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(2000);
             }
         }
-        pthread_yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     NOTICELOG << "audioMonitoThread exiting";

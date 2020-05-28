@@ -16,10 +16,10 @@ AudioBuffer::AudioBuffer(bool upmix2to51)
 , m_filterSurround(7000.0 / 48000.0, .5)
 , m_filterLeft(10000.0 / 48000.0, 0.1)
 , m_filterRight(10000.0 / 48000.0, 0.1)
-, m_phaseShifter(PHASEHIFTER_FILTER_LENGTH)
+, m_phaseShifter(PHASEHIFTER_FILTER_LENGTH, 1536)
 , m_upmix2to51(upmix2to51)
 {
-    m_tempbuf = new uint8_t[(1536 + PHASEHIFTER_FILTER_LENGTH) * sizeof(float)];
+    m_tempbuf = (uint8_t *)m_phaseShifter.GetBuffer();
 }
 
 AudioBuffer::~AudioBuffer()
@@ -37,8 +37,6 @@ AudioBuffer::~AudioBuffer()
         delete m_head;
         m_head = b;
     }
-
-    delete m_tempbuf;
 }
 
 void AudioBuffer::Reset()
@@ -203,7 +201,7 @@ AVFrame * AudioBuffer::GetFrame(bool flush)
     int bs = 1536 * sizeof(float);
     int peekAmountBytes = 0;
     if (m_head && m_head->applyPhase)
-        peekAmountBytes = m_phaseShifter.GetFilterLength() / 2
+        peekAmountBytes = m_phaseShifter.GetPeekSize()
                           * sizeof(float); // Have to provide filt/2 extra data
     if (m_bytesBuffered >= (bs + peekAmountBytes) || (flush && m_bytesBuffered))
     {
@@ -285,9 +283,7 @@ AVFrame * AudioBuffer::GetFrame(bool flush)
             if (c < (bs + peekAmountBytes))
                 memset(m_tempbuf + c, 0, (bs + peekAmountBytes) - c);
             // memcpy(frame->data[4], m_tempbuf, 1536 * sizeof(float));
-            c = m_phaseShifter.Process((float *)m_tempbuf,
-                                       (float *)frame->data[4],
-                                       (bs + peekAmountBytes) / sizeof(float));
+            c = m_phaseShifter.Process((float *)frame->data[4]);
             memcpy(frame->data[5], frame->data[4], 1536 * sizeof(float));
         }
 
