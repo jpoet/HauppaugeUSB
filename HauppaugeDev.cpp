@@ -514,7 +514,6 @@ bool HauppaugeDev::init_hdmi(void)
             return false;
         }
 
-        vp.vFreq = 29.97;  // TODO This needs to be changed to support PAL also
         if (!set_input_format(ENCS_HDMI, vp.width, vp.height,
                               vp.interlaced, vp.vFreq,
                               16.0f/9, ap.sampleRate))
