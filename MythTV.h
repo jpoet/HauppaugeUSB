@@ -25,6 +25,8 @@
 #include "HauppaugeDev.h"
 #include "USBif.h"
 
+#include "Transcoder.h"
+
 #include <atomic>
 #include <string>
 #include <vector>
@@ -164,6 +166,8 @@ class MythTV
     std::atomic<bool> m_ready;
 
     USBWrapper_t::callback_t m_error_cb;
+
+    Transcoder * m_transcoder;
 };
 
 #endif

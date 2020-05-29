@@ -70,6 +70,49 @@ StreamBuffer::~StreamBuffer()
     }
 }
 
+void StreamBuffer::Reset()
+{
+    if (m_avioContext)
+    {
+        av_free(m_avioContext->buffer);
+        avio_context_free(&m_avioContext);
+    }
+
+    if (m_iAVFContext)
+    {
+        avformat_free_context(m_iAVFContext);
+    }
+
+    while (m_headFree)
+    {
+        block_t * b = m_headFree->next;
+        delete m_headFree;
+        m_headFree = b;
+    }
+
+    while (m_head)
+    {
+        block_t * b = m_head->next;
+        delete m_head;
+        m_head = b;
+    }
+
+    unsigned char * buffer = (unsigned char *)av_malloc(AVBUFSIZE);
+    m_iAVFContext = avformat_alloc_context();
+
+    m_avioContext = avio_alloc_context(buffer, AVBUFSIZE, 0, (void *)this,
+                                       &staticReadPacket, nullptr, nullptr);
+
+    m_iFormat = av_find_input_format("mpegts");
+
+    if (buffer && m_iAVFContext && m_avioContext && m_iFormat)
+    {
+        m_iAVFContext->pb = m_avioContext;
+        m_iAVFContext->probesize = 2147483647;
+        m_iAVFContext->max_analyze_duration = 2147483647;
+    }
+}
+
 StreamBuffer::block_t * StreamBuffer::GetBlock(unsigned int blocksize)
 {
     block_t * block;
@@ -276,7 +319,10 @@ AVPacket * StreamBuffer::GetNextPacket(bool flush)
         if (ret == -EAGAIN)
             DEBUGLOG << "Demuxer returned EAGAIN";
         else
+        {
+            Reset();
             ERRORLOG << "Demuxer returned an error: " << ret;
+        }
         return nullptr;
     }
 

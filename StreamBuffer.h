@@ -50,6 +50,8 @@ class StreamBuffer
 
     void FreeBlock(block_t * block);
 
+    void Reset();
+
     void PutData(void * ptr, size_t length);
 
     AVPacket * Flush();

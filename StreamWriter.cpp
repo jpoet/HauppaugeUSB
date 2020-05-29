@@ -166,7 +166,7 @@ bool StreamWriter::WritePacket(AVPacket * pkt)
     ret = av_interleaved_write_frame(m_oAVFContext, pkt);
     if (ret < 0)
     {
-        ERRORLOG << "Error writing frame for stream " << pkt->stream_index;
+        ERRORLOG << "Error writing frame for stream " << pkt->stream_index << " error: " << ret;
         return false;
     }
 
@@ -178,7 +178,7 @@ int StreamWriter::WriteBuffer(uint8_t * buf, int buf_size)
     if (m_cb)
         (*m_cb)(buf, buf_size);
 
-    if (m_fd)
+    if (m_fd >= 1)
         return write(m_fd, buf, buf_size);
 
     return buf_size;

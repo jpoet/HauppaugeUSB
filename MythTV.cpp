@@ -44,6 +44,7 @@ MythTV::MythTV(const Parameters & params, const string & desc)
     , m_xon(false)
     , m_ready(false)
     , m_error_cb(std::bind(&MythTV::USBError, this))
+    , m_transcoder(nullptr)
 {
     m_buffer.Start();
     m_commands.Start();
@@ -60,6 +61,8 @@ MythTV::~MythTV(void)
     delete m_dev;
     m_dev = nullptr;
     m_flow_mutex.unlock();
+
+    delete m_transcoder;
 }
 
 void MythTV::Terminate(void)
@@ -126,9 +129,11 @@ void MythTV::OpenDev(void)
         return;
     }
 
-    Transcoder transcoder(std::string(), &getWriteCallBack());
+    m_transcoder= new Transcoder(std::string(), &getWriteCallBack(), true);
     if (!m_dev->Open(m_usbio, (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3),
-                     transcoder))
+                     *m_transcoder))
+    // if (!m_dev->Open(m_usbio, (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3),
+    //                  &getWriteCallBack()))
     {
         Fatal(m_dev->ErrorString());
         delete m_dev;
@@ -324,8 +329,8 @@ bool Commands::process_command(const string & cmd)
     }
     if (starts_with(tokens[0], "LockTimeout"))
     {
-        send_status(cmd, serial, "OK:12000");
         m_parent->OpenDev();
+        send_status(cmd, serial, "OK:12000");
         return true;
     }
     if (starts_with(tokens[0], "HasTuner?"))
