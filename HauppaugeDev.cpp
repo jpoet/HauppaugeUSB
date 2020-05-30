@@ -791,7 +791,7 @@ void HauppaugeDev::audioMonitorLoop()
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 
     exitAudioMonitorLoop = false;
-    NOTICELOG << "audioMonitoThread starting";
+    NOTICELOG << "audioMonitorThread starting";
 
     while (!exitAudioMonitorLoop) {
 #if 0
@@ -869,7 +869,7 @@ void HauppaugeDev::audioMonitorLoop()
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    NOTICELOG << "audioMonitoThread exiting";
+    NOTICELOG << "audioMonitorThread exiting";
     // NOTICELOG << "Audio state: " << stateToBits(state)
     //                    << " format: " << stateToBits(format)
     //                    << " bppc0: " << setw(4) << (int)bppc0

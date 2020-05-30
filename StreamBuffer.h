@@ -1,5 +1,5 @@
-#ifndef StreamBuffer_h_
-#define StreamBuffer_h_
+#ifndef STREAMBUFFER_H
+#define STREAMBUFFER_H
 
 #include <stdint.h>
 
@@ -46,11 +46,14 @@ class StreamBuffer
 
     AVPacket m_pkt;
 
+    bool m_isErrored;
+
     block_t * GetBlock(unsigned int blocksize);
 
     void FreeBlock(block_t * block);
 
     void Reset();
+    bool isErrored();
 
     void PutData(void * ptr, size_t length);
 

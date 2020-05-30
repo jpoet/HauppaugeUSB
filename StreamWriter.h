@@ -25,6 +25,7 @@ class StreamWriter
     AVOutputFormat * m_oFormat;
     bool m_initialized;
     int m_fd;
+    bool m_paused;
 
     StreamWriter(Transcoder * transcoder,
                  const std::string & filename = std::string(),
@@ -35,6 +36,11 @@ class StreamWriter
 
   public:
     int WriteBuffer(uint8_t * buf, int buf_size);
+
+    void Reset();
+
+    void Pause();
+    void Resume();
 };
 
 #endif

@@ -44,6 +44,7 @@ Transcoder::Transcoder(const std::string & output_filename,
 , m_curAudioStreamIndex(-1)
 {
     av_log_set_level(AV_LOG_QUIET);
+    m_streamWriter->Pause();
 }
 
 Transcoder::~Transcoder()
@@ -197,6 +198,12 @@ void Transcoder::ProcessData()
         m_streamBuffer->ReleasePacket(pkt);
     }
 
+    if (m_streamBuffer->isErrored())
+    {
+        m_streamBuffer->Reset();
+        m_streamWriter->Reset();
+    }
+
     if (m_flushing)
     {
         AVFrame * frame;
@@ -224,4 +231,6 @@ void Transcoder::ProcessData()
         }
         m_flushing = false;
     }
+
+    m_heartbeat = std::chrono::system_clock::now();
 }

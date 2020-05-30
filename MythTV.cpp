@@ -94,7 +94,7 @@ void MythTV::Wait(void)
             // Check for wedged state.
             auto tm = std::chrono::system_clock::now() -
                       std::chrono::seconds(60);
-            if (m_buffer.HeartBeat() < tm)
+            if (m_buffer.HeartBeat() < tm && (!m_transcoder || m_transcoder->HeartBeat() < tm))
                 Fatal("We seem to be wedged!");
         }
     }
@@ -129,11 +129,11 @@ void MythTV::OpenDev(void)
         return;
     }
 
-    m_transcoder= new Transcoder(std::string(), &getWriteCallBack(), true);
+    if (m_params.transcode)
+        m_transcoder = new Transcoder(std::string("stdout"), nullptr, m_params.upmix);
+
     if (!m_dev->Open(m_usbio, (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3),
-                     *m_transcoder))
-    // if (!m_dev->Open(m_usbio, (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3),
-    //                  &getWriteCallBack()))
+                     m_params.transcode? *m_transcoder : &getWriteCallBack()))
     {
         Fatal(m_dev->ErrorString());
         delete m_dev;
@@ -183,6 +183,9 @@ bool MythTV::StartEncoding(string & resultmsg)
         return false;
     }
 
+    if (m_transcoder)
+        m_transcoder->Resume();
+
     resultmsg.clear();
     m_streaming = true;
     m_flow_cond.notify_all();
@@ -219,6 +222,8 @@ bool MythTV::StopEncoding(string & resultmsg, bool soft)
 
     m_streaming = false;
     m_flow_cond.notify_all();
+    if (m_transcoder)
+        m_transcoder->Pause();
 
     INFOLOG << "Stopping encoder.";
     if (!m_dev->StopEncoding())
@@ -352,6 +357,8 @@ bool Commands::process_command(const string & cmd)
     if (starts_with(tokens[0], "XON"))
     {
         // Used when FlowControl is XON/XOFF
+        if (m_parent->m_transcoder)
+            m_parent->m_transcoder->Resume();
         send_status(cmd, serial, "OK");
         m_parent->m_xon = true;
         m_parent->m_flow_cond.notify_all();
@@ -359,6 +366,8 @@ bool Commands::process_command(const string & cmd)
     }
     if (starts_with(tokens[0], "XOFF"))
     {
+        if (m_parent->m_transcoder)
+            m_parent->m_transcoder->Pause();
         send_status(cmd, serial, "OK");
         // Used when FlowControl is XON/XOFF
         m_parent->m_xon = false;

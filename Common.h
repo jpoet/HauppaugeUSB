@@ -42,6 +42,8 @@ struct Parameters
     std::string output;
     bool   mythtv;
     bool   flipFields;
+    bool   transcode;
+    bool   upmix;
 
     _HAPI_VIDEO_CAPTURE_SOURCE videoInput;
     _HAPI_AUDIO_CAPTURE_SOURCE audioInput;

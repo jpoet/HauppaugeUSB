@@ -1,8 +1,9 @@
-#ifndef Transcoder_h_
-#define Transcoder_h_
+#ifndef TRANSCODER_H
+#define TRANSCODER_H
 
 #include <stdint.h>
 #include <string>
+#include <chrono>
 
 #include "AudioBuffer.h"
 #include "AudioDecoder.h"
@@ -27,6 +28,7 @@ class Transcoder
     DataTransfer::callback_t m_cb;
     bool m_flushing;
     int m_curAudioStreamIndex;
+    std::chrono::time_point<std::chrono::system_clock> m_heartbeat;
 
     void StreamReset();
     void StreamFlushed();
@@ -40,6 +42,11 @@ class Transcoder
 
     void AcceptData(void * ptr, size_t length);
     void ProcessData();
+    void Pause() { m_streamWriter->Pause(); }
+    void Resume() { m_streamWriter->Resume(); }
+    std::chrono::time_point<std::chrono::system_clock> HeartBeat() const
+    { return m_heartbeat; }
+
     DataTransfer::callback_t * GetCallback() { return &m_cb; }
     operator DataTransfer::callback_t *() { return &m_cb; }
 };

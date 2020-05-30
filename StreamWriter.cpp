@@ -1,6 +1,7 @@
 #include "StreamWriter.h"
 #include "Logger.h"
 #include "Transcoder.h"
+#include <thread>
 
 extern "C" {
 #include <libavutil/timestamp.h>
@@ -79,9 +80,55 @@ static void log_packet(const AVFormatContext * fmt_ctx, const AVPacket * pkt,
              << " codec:" << codec->name;
 }
 
+void StreamWriter::Reset()
+{
+    if (m_fd > 1)
+        close(m_fd);
+
+    if (m_avioContext)
+    {
+        av_free(m_avioContext->buffer);
+        avio_context_free(&m_avioContext);
+    }
+
+    if (m_oAVFContext)
+    {
+        avformat_free_context(m_oAVFContext);
+    }
+
+    if (!m_filename.empty() || m_cb)
+    {
+        unsigned char * buffer = (unsigned char *)av_malloc(1024 * 1024);
+        m_oAVFContext = avformat_alloc_context();
+
+        m_avioContext =
+            avio_alloc_context(buffer, 1024 * 1024, 1, (void *)this, nullptr,
+                               &staticWriteBuffer, nullptr);
+
+        m_oFormat = av_guess_format("mpegts", nullptr, nullptr);
+    }
+
+    m_initialized = false;
+    WARNLOG << "StreamWriter::Reset called";
+}
+
+void StreamWriter::Pause()
+{
+    m_paused = true;
+}
+
+void StreamWriter::Resume()
+{
+    m_paused = false;
+}
+
 bool StreamWriter::WritePacket(AVPacket * pkt)
 {
     int ret;
+
+    if (m_paused)
+        return true;
+
     if (!m_initialized)
     {
         m_oAVFContext->pb = m_avioContext;

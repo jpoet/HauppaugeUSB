@@ -25,6 +25,7 @@ StreamBuffer::StreamBuffer(Transcoder * transcoder)
 , m_avioContext(nullptr)
 , m_iAVFContext(nullptr)
 , m_initialized(false)
+, m_isErrored(false)
 {
     unsigned char * buffer = (unsigned char *)av_malloc(AVBUFSIZE);
     m_iAVFContext = avformat_alloc_context();
@@ -70,6 +71,11 @@ StreamBuffer::~StreamBuffer()
     }
 }
 
+bool StreamBuffer::isErrored()
+{
+    return m_isErrored;
+}
+
 void StreamBuffer::Reset()
 {
     if (m_avioContext)
@@ -89,6 +95,7 @@ void StreamBuffer::Reset()
         delete m_headFree;
         m_headFree = b;
     }
+    m_tailFree = &m_headFree;
 
     while (m_head)
     {
@@ -96,6 +103,8 @@ void StreamBuffer::Reset()
         delete m_head;
         m_head = b;
     }
+    m_tail = &m_head;
+    m_bytesBuffered = 0;
 
     unsigned char * buffer = (unsigned char *)av_malloc(AVBUFSIZE);
     m_iAVFContext = avformat_alloc_context();
@@ -111,6 +120,12 @@ void StreamBuffer::Reset()
         m_iAVFContext->probesize = 2147483647;
         m_iAVFContext->max_analyze_duration = 2147483647;
     }
+
+    m_initialized = false;
+
+    m_isErrored = false;
+
+    WARNLOG << "StreamBuffer::Reset called";
 }
 
 StreamBuffer::block_t * StreamBuffer::GetBlock(unsigned int blocksize)
@@ -320,7 +335,7 @@ AVPacket * StreamBuffer::GetNextPacket(bool flush)
             DEBUGLOG << "Demuxer returned EAGAIN";
         else
         {
-            Reset();
+            m_isErrored = true;
             ERRORLOG << "Demuxer returned an error: " << ret;
         }
         return nullptr;
