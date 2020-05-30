@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
          "Video rate type (0=CBR, 1=VBR, 2=CAPPED_VBR)"
          "CBR: Constant (video) Bit Rate"
          "VBR: Variable (video) Bit Rate"
-         "CBR: Variable (video) Bit Rate with upper limit")
+         "CAPPED_VBR: Variable (video) Bit Rate with upper limit")
         ("minvbrrate,m", po::value<int>()->default_value(9000000),
          "Mininum VBR bitrate in bits/s "
          "default 9Mbps (range 1Mb/s - 9Mb/s)")
