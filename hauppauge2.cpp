@@ -213,7 +213,7 @@ int main(int argc, char *argv[])
          "Mininum VBR bitrate in bits/s \n"
          "default 9Mbps (range 1Mb/s - 9Mb/s)")
         ("maxvbrrate,M", po::value<int>()->default_value(20000000),
-         "Maximum VBR bitrate bitrate in bits/s \"
+         "Maximum VBR bitrate bitrate in bits/s \n"
          "default 20Mbps (range 10Mb/s - 20Mb/s)")
         ("tsbitrate,t", po::value<int>()->default_value(20000000),
          "Transport Stream bitrate")
