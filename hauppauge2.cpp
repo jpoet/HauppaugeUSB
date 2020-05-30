@@ -203,13 +203,18 @@ int main(int argc, char *argv[])
          "24=1344Kbps, 25=1408Kbps, 26=1411Kbps, 27=1472Kbps, 28=1536Kbps, "
          "29=MAX)")
         ("videobitrate,r", po::value<int>()->default_value(8000000),
-         "Video bitrate")
+         "Video bitrate in bits/s (default 8Mb/s)")
         ("videoratecontrol,C", po::value<int>()->default_value(1),
-         "Video rate type (0=CBR, 1=VBR, 2=CAPPED_VBR)")
+         "Video rate type (0=CBR, 1=VBR, 2=CAPPED_VBR)"
+         "CBR: Constant (video) Bit Rate"
+         "VBR: Variable (video) Bit Rate"
+         "CBR: Variable (video) Bit Rate with upper limit")
         ("minvbrrate,m", po::value<int>()->default_value(9000000),
-         "Mininum VBR bitrate")
+         "Mininum VBR bitrate in bits/s "
+         "default 9Mbps (range 1Mb/s - 9Mb/s)")
         ("maxvbrrate,M", po::value<int>()->default_value(20000000),
-         "Maximum VBR bitrate")
+         "Maximum VBR bitrate bitrate in bits/s "
+         "default 20Mbps (range 10Mb/s - 20Mb/s)")
         ("tsbitrate,t", po::value<int>()->default_value(20000000),
          "Transport Stream bitrate")
         ("videocodingmode,X", po::value<int>()->default_value(4),
