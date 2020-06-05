@@ -50,7 +50,7 @@ USBWrapper_t::~USBWrapper_t(void)
     }
     if (m_dev_list)
         //free the list, unref the devices in it
-        libusb_free_device_list(m_dev_list, 0);
+        libusb_free_device_list(m_dev_list, 1);
 
 }
 
@@ -290,6 +290,12 @@ bool USBWrapper_t::Open(const string& serial, callback_t * error_cb)
         return false;
     }
 
+    if (m_dev_list != nullptr) 
+    {
+        libusb_free_device_list(m_dev_list, 1);
+        m_dev_list = nullptr;
+    }
+
     if (m_dev_list == nullptr)
     {
         if ((m_dev_cnt = libusb_get_device_list(m_ctx, &m_dev_list)) < 0)
@@ -303,6 +309,7 @@ bool USBWrapper_t::Open(const string& serial, callback_t * error_cb)
     char   strDesc[257];
     int    serial_sz = serial.size();
     libusb_device_handle *handle;
+    m_handle = nullptr;
 
     for (int idx = 0; idx < m_dev_cnt; ++idx)
     {
@@ -339,7 +346,7 @@ bool USBWrapper_t::Open(const string& serial, callback_t * error_cb)
         break;
     }
 
-    if (idx == m_dev_cnt)
+    if (idx == m_dev_cnt || m_handle == nullptr)
     {
         m_errmsg << "Unable to find serial " << serial << " in USB dev list.\n";
         return false;

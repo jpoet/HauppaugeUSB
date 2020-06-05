@@ -599,22 +599,39 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio, bool ac3,
 
     m_fx2 = new FX2Device_t(usbio);
 
+    int ret;
     int idx =0;
     for ( ; !m_fx2->isUSBHighSpeed() && idx < MAX_RETRY; ++idx)
     {
+        INFOLOG << "Reloading firmware, attempt " << (idx+1);
         m_fx2->stopCPU();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         m_fx2->loadFirmware();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         m_fx2->startCPU();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+        do {
+            usbio.Close();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            ret = usbio.Open(m_params.serial);
+        } while (ret < 0);
+    }
+
+    if (idx == MAX_RETRY)
+    {
+        CRITLOG << "Could not communicate with USB device";
+        return false;
     }
 
     INFOLOG << "FX2 ready after " << idx << " tries.";
     log_ports();
 
     // reset CS5340, it will be set back by m_encDev->init()
-    m_fx2->setPortStateBits(FX2_CTL_PORTS, 0, 0x10);
+    if (!m_fx2->setPortStateBits(FX2_CTL_PORTS, 0, 0x10))
+    {
+        CRITLOG << "Error setting FX2_CTL_PORT";
+        return false;
+    }
 
     m_encDev = new encoderDev_DXT_t(*m_fx2);
     if (!m_encDev->init())
