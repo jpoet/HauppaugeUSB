@@ -21,7 +21,7 @@ class Transcoder
     StreamBuffer * m_streamBuffer;
     AudioDecoder * m_audioDecoder;
     StreamWriter * m_streamWriter;
-    AudioBuffer * m_audioBuffer;
+    AudioBuffer  * m_audioBuffer;
     AudioEncoder * m_audioEncoder;
     std::string m_output_filename;
     DataTransfer::callback_t * m_client;

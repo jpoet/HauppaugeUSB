@@ -90,7 +90,7 @@ AudioBuffer::block_t * AudioBuffer::GetBlock(unsigned int blocksize)
         block->allocated = allocated;
     }
 
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 8; ++i)
         block->bufs[i] = block->data + i * blocksize;
 
     block->applyPhase = false;
@@ -124,7 +124,7 @@ void AudioBuffer::PutFrame(AVFrame * frame)
         {
             // upmix stereo using "Dolby Surround"
             block->applyPhase = true; // apply phase shift during read
-            for (int i = 0; i < frame->nb_samples; i++)
+            for (int i = 0; i < frame->nb_samples; ++i)
             {
                 float l = *((float *)(frame->data[0]) + i);
                 float r = *((float *)(frame->data[1]) + i);
@@ -140,9 +140,9 @@ void AudioBuffer::PutFrame(AVFrame * frame)
         }
         else
         {
-            for (int i = 0; i < frame->channels; i++)
+            for (int i = 0; i < frame->channels; ++i)
                 memcpy(block->bufs[i], frame->data[i], bs);
-            for (int i = frame->channels; i < 6; i++)
+            for (int i = frame->channels; i < 6; ++i)
                 memset(block->bufs[i], 0, bs);
         }
         break;
@@ -153,9 +153,9 @@ void AudioBuffer::PutFrame(AVFrame * frame)
         case AV_CH_LAYOUT_STEREO:
         case AV_CH_LAYOUT_5POINT1:
         case AV_CH_LAYOUT_7POINT1:
-            for (int i = 0; i < frame->nb_samples; i++)
+            for (int i = 0; i < frame->nb_samples; ++i)
             {
-                for (int j = 0; j < frame->channels; j++)
+                for (int j = 0; j < frame->channels; ++j)
                 {
                     *((float *)(&block->data[j]) + i) =
                         *((int16_t *)(&frame->data[0]) + (i * frame->channels)
@@ -230,7 +230,7 @@ AVFrame * AudioBuffer::GetFrame(bool flush)
             if (peekAmountBytes)
             {
                 // Copy the first 4 channels
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 4; ++i)
                     memcpy(frame->data[i] + c,
                            (const void *)(b->bufs[i] + b->offset), l);
                 // For the surround, copy into a separate buffer
@@ -239,7 +239,7 @@ AVFrame * AudioBuffer::GetFrame(bool flush)
             }
             else
             {
-                for (int i = 0; i < 6; i++)
+                for (int i = 0; i < 6; ++i)
                     memcpy(frame->data[i] + c,
                            (const void *)(b->bufs[i] + b->offset), l);
             }
@@ -256,7 +256,7 @@ AVFrame * AudioBuffer::GetFrame(bool flush)
 
         if (c < bs)
         {
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 6; ++i)
                 memset(frame->data[i] + c, 0, bs - c);
         }
         else if (peekAmountBytes)

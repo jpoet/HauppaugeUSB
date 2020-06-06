@@ -804,7 +804,7 @@ static std::string stateToBits(uint8_t state)
 {
     std::ostringstream out;
 
-    for (int i=0; i<8; i++)
+    for (int i=0; i<8; ++i)
     {
         out << ((state & (1 << (7-i))) != 0? "1" : "0");
     }
