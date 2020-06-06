@@ -94,7 +94,8 @@ void MythTV::Wait(void)
             // Check for wedged state.
             auto tm = std::chrono::system_clock::now() -
                       std::chrono::seconds(60);
-            if (m_buffer.HeartBeat() < tm && (!m_transcoder || m_transcoder->HeartBeat() < tm))
+            if (m_buffer.HeartBeat() < tm &&
+                (!m_transcoder || m_transcoder->HeartBeat() < tm))
                 Fatal("We seem to be wedged!");
         }
     }
@@ -130,7 +131,8 @@ void MythTV::OpenDev(void)
     }
 
     if (m_params.transcode)
-        m_transcoder = new Transcoder(std::string("stdout"), nullptr, m_params.upmix);
+        m_transcoder = new Transcoder(std::string("stdout"),
+                                      nullptr, m_params.upmix);
 
     if (!m_dev->Open(m_usbio, (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3),
                      m_params.transcode? *m_transcoder : &getWriteCallBack()))
