@@ -47,7 +47,6 @@ HauppaugeDev::HauppaugeDev(const Parameters & params)
     , m_params(params)
     , m_video_initialized(-1)
     , m_err(false)
-    , m_thread(0)
 {
     configure();
 }
@@ -136,8 +135,6 @@ void HauppaugeDev::configure(void)
 
 //    RegistryAccess::writeDword("AudioCapMode", 5);
 
-
-
     // AudioOutputMode
     // -
 }
@@ -159,6 +156,10 @@ bool HauppaugeDev::set_digital_audio(bool optical)
     {
         WARNLOG << "This device does not have a CS8416. "
                 << "AC3 not available.";
+
+        // Delete this so we know it doesn't exist
+        delete m_audio_CS8416;
+        m_audio_CS8416 = nullptr;
         return false;
     }
 
@@ -247,36 +248,43 @@ bool HauppaugeDev::set_input_format(encoderSource_t source,
 
     encoderAudioInFormat_t audioFormat =
         (m_params.audioCodec == HAPI_AUDIO_CODEC_AC3 ? ENCAIF_AC3
-         : ENCAIF_AUTO);
+                                                     : ENCAIF_AUTO);
+    HAPI_AUDIO_CODEC audioCodec = m_params.audioCodec;
 
-    // set_audio_format(audioFormat);
-    set_audio_format(ENCAIF_AC3); // TODO This seems to always work but it needs to be tested with more devices and inputs
+    set_audio_format(audioFormat);
 
-    // Detect the current audio type
+    // Detect the current audio type if we didn't already specify AC3
     // Wait for up to 2 video frames to detect audio type
-    std::this_thread::sleep_for(std::chrono::milliseconds(66));
-    uint8_t bppc0, format, state;
-    for (int t = 66; t > 0; t -= 3)
+    if (audioFormat == ENCAIF_AUTO && m_audio_CS8416)
     {
-        m_audio_CS8416->direct_io()->read(audio_CS8416::DeviceIO::Reg::INTSTAT,
-                                       (uint8_t *)&state, sizeof(state));
-        m_audio_CS8416->direct_io()->read(audio_CS8416::DeviceIO::Reg::BRSTPREAPC0,
-                                       (uint8_t *)&bppc0, sizeof(bppc0));
-        m_audio_CS8416->direct_io()->read(audio_CS8416::DeviceIO::Reg::AFMTD,
-                                       (uint8_t *)&format, sizeof(format));
-        if (state & 1)
-            break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        std::this_thread::sleep_for(std::chrono::milliseconds(66));
+        uint8_t bppc0, format, state;
+        for (int t = 66; t > 0; t -= 3)
+        {
+            m_audio_CS8416->direct_io()->read(
+                audio_CS8416::DeviceIO::Reg::INTSTAT, (uint8_t *)&state,
+                sizeof(state));
+            m_audio_CS8416->direct_io()->read(
+                audio_CS8416::DeviceIO::Reg::BRSTPREAPC0, (uint8_t *)&bppc0,
+                sizeof(bppc0));
+            m_audio_CS8416->direct_io()->read(
+                audio_CS8416::DeviceIO::Reg::AFMTD, (uint8_t *)&format,
+                sizeof(format));
+            if (state & 1)
+                break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        }
+
+        audioCodec = getAudioCodec(format, bppc0);
+        m_currentAudioCodec = audioCodec;
+        encoderAudioInFormat_t newFormat =
+            audioCodec == HAPI_AUDIO_CODEC_AAC ? ENCAIF_AUTO : ENCAIF_AC3;
+        if (newFormat != audioFormat)
+            set_audio_format(newFormat);
+        audioFormat = newFormat;
+
+        INFOLOG << "Detected audioCodec: " << audioCodec;
     }
-
-    HAPI_AUDIO_CODEC audioCodec = getAudioCodec(format, bppc0);
-    currentAudioCodec = audioCodec;
-    audioFormat = audioCodec == HAPI_AUDIO_CODEC_AAC? ENCAIF_AUTO : ENCAIF_AC3;
-
-    // audioCodec = HAPI_AUDIO_CODEC_AAC; // TODO remove for format switching
-    // audioFormat = ENCAIF_AUTO;
-
-    INFOLOG << "Detected audioCodec: " << audioCodec;
 
     if (m_params.videoCodingMode >= HAPI_CODING_MODE_FIELD &&
         m_params.videoCodingMode <= HAPI_CODING_MODE_PAFF)
@@ -545,7 +553,6 @@ bool HauppaugeDev::init_hdmi(void)
             default:
               m_rxDev->setOutputBusMode(RXOBM_422_10x2);
         }
-
     }
 
 #if 0
@@ -697,8 +704,6 @@ bool HauppaugeDev::Open(USBWrapper_t & usbio, bool ac3,
     if (cb)
         m_encDev->setWriteCallback(*cb);
 
-//    audio_CX2081x _audio_CX2081x(*m_fx2);
-
     INFOLOG << "Hauppauge USB device ready.";
 
     return true;
@@ -726,13 +731,6 @@ void HauppaugeDev::Close(void)
     m_audio_CS8416 = nullptr;
 }
 
-static void * thread_start(void * arg)
-{
-    reinterpret_cast<HauppaugeDev *>(arg)->audioMonitorLoop();
-    return nullptr;
-}
-
-
 bool HauppaugeDev::StartEncoding(void)
 {
     switch (m_params.videoInput)
@@ -756,7 +754,7 @@ bool HauppaugeDev::StartEncoding(void)
           break;
     }
 
-    if(!m_encDev->startCapture())
+    if (!m_encDev->startCapture())
     {
         m_errmsg = "Encoder start capture failed.";
         ERRORLOG << m_errmsg;
@@ -764,15 +762,10 @@ bool HauppaugeDev::StartEncoding(void)
     }
     log_ports();
 
-    if (m_thread == 0) // TODO remove the && 0 for format switching
+    if (m_audio_CS8416)
     {
-        if (pthread_create(&m_thread, 0, thread_start, this) != 0)
-        {
-            m_thread = 0;
-            m_errmsg = "Encoder start capture failed.";
-            ERRORLOG << m_errmsg;
-            return false;
-        }
+        m_audioMonitorThread =
+            std::thread(&HauppaugeDev::audioMonitorLoop, this);
     }
 
     NOTICELOG << "Capture started.";
@@ -782,14 +775,13 @@ bool HauppaugeDev::StartEncoding(void)
 bool HauppaugeDev::StopEncoding(void)
 {
     // Stop the thread first in case its busy switching  audioCodecs
-    if (m_thread != 0)
+    if (m_audioMonitorThread.joinable())
     {
-        exitAudioMonitorLoop = true;
-        pthread_join(m_thread, nullptr);
-        m_thread = 0;
+        m_exitAudioMonitorLoop = true;
+        m_audioMonitorThread.join();
     }
 
-    if(!m_encDev->stopCapture())
+    if (!m_encDev->stopCapture())
     {
         m_errmsg = "Encoder stop capture failed.";
         WARNLOG << m_errmsg;
@@ -804,16 +796,16 @@ static std::string stateToBits(uint8_t state)
 {
     std::ostringstream out;
 
-    for (int i=0; i<8; ++i)
+    for (int i = 0; i < 8; ++i)
     {
-        out << ((state & (1 << (7-i))) != 0? "1" : "0");
+        out << ((state & (1 << (7 - i))) != 0 ? "1" : "0");
     }
     out << setw(5) << (int)state;
 
     return out.str();
 }
 
-void HauppaugeDev::audioMonitorLoop()
+void HauppaugeDev::audioMonitorLoop(void)
 {
     uint8_t bppc0, bppc1, bppd0, bppd1;
     uint8_t state;
@@ -821,12 +813,12 @@ void HauppaugeDev::audioMonitorLoop()
     std::chrono::high_resolution_clock::time_point t1 =
         std::chrono::high_resolution_clock::now();
 
-    exitAudioMonitorLoop = false;
+    m_exitAudioMonitorLoop = false;
 
     setThreadName("audioMonitor");
     NOTICELOG << "audioMonitorThread starting";
 
-    while (!exitAudioMonitorLoop)
+    while (!m_exitAudioMonitorLoop)
     {
         // Poll for audio format changes.
         // Does this belong in a separate thread?
@@ -844,7 +836,7 @@ void HauppaugeDev::audioMonitorLoop()
         {
             HAPI_AUDIO_CODEC audioCodec = getAudioCodec(format, bppc0);
 
-            if (audioCodec != currentAudioCodec)
+            if (audioCodec != m_currentAudioCodec)
             {
                 m_audio_CS8416->direct_io()->read(audio_CS8416::DeviceIO::Reg::BRSTPREAPC1,
                                                 (uint8_t *)&bppc1, sizeof(bppc1));
@@ -888,8 +880,9 @@ void HauppaugeDev::audioMonitorLoop()
 
                 setAudioMode(audioCodec);
 
-                currentAudioCodec = audioCodec;
-                t1 = std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(2000);
+                m_currentAudioCodec = audioCodec;
+                t1 = std::chrono::high_resolution_clock::now()
+                     + std::chrono::milliseconds(2000);
             }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -982,8 +975,8 @@ HAPI_AUDIO_CODEC HauppaugeDev::getAudioCodec(uint8_t format, uint8_t bppc0)
             audioCodec = HAPI_AUDIO_CODEC_AAC /* ??? */;
             break;
             case 21:
-            audioCodec = format & 1 ?
-                        HAPI_AUDIO_CODEC_AC3 : HAPI_AUDIO_CODEC_AAC;
+            audioCodec =
+                format & 1 ? HAPI_AUDIO_CODEC_AC3 : HAPI_AUDIO_CODEC_AAC;
             break;
             default:
             audioCodec = HAPI_AUDIO_CODEC_AAC;

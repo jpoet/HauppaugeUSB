@@ -28,11 +28,8 @@
 #include "Common.h"
 
 #include <string>
-#include <pthread.h>
+#include <thread>
 
-#ifdef DECLARE_THREAD_START
-static void * thread_start(void *);
-#endif
 class HauppaugeDev
 {
   public:
@@ -76,7 +73,7 @@ class HauppaugeDev
     void log_ports(void);
 
     friend void * thread_start(void *);
-    void audioMonitorLoop();
+    void audioMonitorLoop(void);
     HAPI_AUDIO_CODEC getAudioCodec(uint8_t format, uint8_t bppc0);
 
   private:
@@ -91,9 +88,9 @@ class HauppaugeDev
     std::string         m_errmsg;
     bool                m_err;
 
-    pthread_t m_thread;
-    bool volatile exitAudioMonitorLoop;
-    HAPI_AUDIO_CODEC currentAudioCodec;
+    std::thread         m_audioMonitorThread;
+    bool volatile       m_exitAudioMonitorLoop;
+    HAPI_AUDIO_CODEC    m_currentAudioCodec;
 };
 
 #endif
