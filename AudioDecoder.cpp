@@ -47,7 +47,11 @@ bool AudioDecoder::PutPacket(AVPacket * packet)
     ret = avcodec_send_packet(m_aContext, packet);
     if (ret < 0)
     {
-        ERRORLOG << "Decoding failed: " << ret;
+        // if (ret == -1094995529) {
+        //     // Invalid Data was given, possibly got some left over packet from the other codec
+        // }
+        char buf[256];
+        ERRORLOG << "Decoding failed: " << av_strerror(ret, buf, sizeof(buf));
         return false;
     }
 

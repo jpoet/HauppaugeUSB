@@ -900,7 +900,12 @@ void HauppaugeDev::audioMonitorLoop(void)
 bool HauppaugeDev::setAudioMode(HAPI_AUDIO_CODEC audioCodec)
 {
     NOTICELOG << "Setting new audio mode";
-    bool r = m_encDev->setAudioMode(audioCodec);
+    int t = 0;
+    bool r;
+    while ((r=m_encDev->setAudioMode(audioCodec)) == false && t < 3)
+    {
+        ERRORLOG << "Failed setting audio mode, attempt " << (++t);
+    }
     NOTICELOG << "Setting new audio mode done";
     return r;
 }

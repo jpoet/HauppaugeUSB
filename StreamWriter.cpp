@@ -209,8 +209,16 @@ bool StreamWriter::WritePacket(AVPacket * pkt)
         m_transcoder->m_streamBuffer->m_iAVFContext->streams[pkt->stream_index]
             ->time_base,
         m_oAVFContext->streams[pkt->stream_index]->time_base);
+    if (pkt->pts < pkt->dts)
+        pkt->pts = pkt->dts;
+
 
     ret = av_interleaved_write_frame(m_oAVFContext, pkt);
+    if (ret == -22) {
+        if (pkt->pts < pkt->dts)
+            pkt->pts = pkt->dts;
+        ret = av_interleaved_write_frame(m_oAVFContext, pkt);
+    }
     if (ret < 0)
     {
         ERRORLOG << "Error writing frame for stream " << pkt->stream_index << " error: " << ret;
