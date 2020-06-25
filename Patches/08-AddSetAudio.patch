@@ -1,6 +1,6 @@
 diff -u -r a/Common/EncoderDev/encoderDev_DXT.cpp b/Common/EncoderDev/encoderDev_DXT.cpp
---- a/Common/EncoderDev/encoderDev_DXT.cpp	2020-05-23 11:26:54.000000000 -0500
-+++ b/Common/EncoderDev/encoderDev_DXT.cpp	2020-05-23 01:46:10.000000000 -0500
+--- a/Common/EncoderDev/encoderDev_DXT.cpp	2020-06-25 15:51:45.000000000 -0500
++++ b/Common/EncoderDev/encoderDev_DXT.cpp	2020-05-25 22:55:58.000000000 -0500
 @@ -72,7 +72,7 @@
  
  bool encoderDev_DXT_t::setInputFormat(encoderSource_t source, encoderAudioInFormat_t audioFormat,
@@ -21,7 +21,7 @@ diff -u -r a/Common/EncoderDev/encoderDev_DXT.cpp b/Common/EncoderDev/encoderDev
  
  	switch(source) {
  		case ENCS_CVBS:
-@@ -103,24 +107,28 @@
+@@ -103,24 +107,33 @@
  			hapi->set_param(&_Param, "AudioCapSource", 3); /* 0: LR, 1:SPDIF, 2:SDI, 3: HDMI */
  	}
  
@@ -56,10 +56,15 @@ diff -u -r a/Common/EncoderDev/encoderDev_DXT.cpp b/Common/EncoderDev/encoderDev
 -	}
 +	m_pmtVersion = (m_pmtVersion + 2) & 0x1f;
 +	hapi->set_param(&_Param, "PMTVersion", m_pmtVersion);
++
++	// hapi->set_param(&_Param, "AudioPassthru", 1);
++	// hapi->set_param(&_Param, "AudioStreamID", 189);        /* AC3/DTS */
++	// hapi->set_param(&_Param, "AudioOutputBitrate", HAPI_AUDIO_BITRATE_1536_KBPS);
++	// hapi->set_param(&_Param, "AudioCodecOutputFormat", HAPI_AUDIO_ENCODING_302MPCM);
  
  	if(!hapi->HapiParamSet(&_Param)) {
  		wrapLogError(" HapiParamSet() failed!!");
-@@ -158,9 +166,10 @@
+@@ -158,9 +171,10 @@
  //	hapi->set_param(&_Param, "VideoLatency", 1);
  
  	hapi->set_param(&_Param, "AudioCapSource", 3); // always HDMI for this design // 0: LR, 1:SPDIF, 2:SDI, 3: HDMI
@@ -73,7 +78,7 @@ diff -u -r a/Common/EncoderDev/encoderDev_DXT.cpp b/Common/EncoderDev/encoderDev
  
  	if(!hapi->HapiParamSet(&_Param)) {
  		wrapLogError(" HapiParamSet() failed!!");
-@@ -192,3 +201,54 @@
+@@ -192,3 +206,54 @@
  	if(!hapi->HapiStop()) return false;
  	return true;
  }
@@ -130,7 +135,7 @@ diff -u -r a/Common/EncoderDev/encoderDev_DXT.cpp b/Common/EncoderDev/encoderDev
 +
 diff -u -r a/Common/EncoderDev/encoderDev_DXT.h b/Common/EncoderDev/encoderDev_DXT.h
 --- a/Common/EncoderDev/encoderDev_DXT.h	2016-09-26 15:35:49.000000000 -0500
-+++ b/Common/EncoderDev/encoderDev_DXT.h	2020-05-22 15:58:28.000000000 -0500
++++ b/Common/EncoderDev/encoderDev_DXT.h	2020-05-23 12:00:13.000000000 -0500
 @@ -3,6 +3,8 @@
  
  #include "encoderDev.h"
@@ -167,8 +172,8 @@ diff -u -r a/Common/EncoderDev/encoderDev_DXT.h b/Common/EncoderDev/encoderDev_D
  
  #endif
 diff -u -r a/Common/EncoderDev/encoderDev.h b/Common/EncoderDev/encoderDev.h
---- a/Common/EncoderDev/encoderDev.h	2020-05-23 11:26:54.000000000 -0500
-+++ b/Common/EncoderDev/encoderDev.h	2020-05-13 22:04:36.000000000 -0500
+--- a/Common/EncoderDev/encoderDev.h	2020-06-25 15:51:45.000000000 -0500
++++ b/Common/EncoderDev/encoderDev.h	2020-05-23 12:00:13.000000000 -0500
 @@ -43,7 +43,7 @@
  
  	virtual bool setInputFormat(encoderSource_t source, encoderAudioInFormat_t audioFormat,
@@ -179,8 +184,8 @@ diff -u -r a/Common/EncoderDev/encoderDev.h b/Common/EncoderDev/encoderDev.h
  	virtual bool setHDMIFormat(int hdmi_fmt, float audioSampleRate) = 0;
  	virtual bool setHDMIAR(float aspectRatio) = 0;
 diff -u -r a/Common/EncoderDev/HAPIHost/CHapi.cpp b/Common/EncoderDev/HAPIHost/CHapi.cpp
---- a/Common/EncoderDev/HAPIHost/CHapi.cpp	2020-05-23 11:26:54.000000000 -0500
-+++ b/Common/EncoderDev/HAPIHost/CHapi.cpp	2020-05-23 11:59:24.007966292 -0500
+--- a/Common/EncoderDev/HAPIHost/CHapi.cpp	2020-06-25 15:51:45.000000000 -0500
++++ b/Common/EncoderDev/HAPIHost/CHapi.cpp	2020-06-09 21:30:45.000000000 -0500
 @@ -2685,9 +2685,9 @@
  			_GetParam.index = 0;
  			HapiParamGet(&_GetParam);
