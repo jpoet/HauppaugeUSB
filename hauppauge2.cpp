@@ -252,9 +252,9 @@ int main(int argc, char * argv[])
             "syslog", po::value<string>()->default_value("local7"),
             "Set the syslog facility code to use for system logging."
             " This option is silently ignored currently.")
-        ("transcode", po::value<bool>()->default_value(true),
+        ("transcode", po::value<bool>()->default_value(false),
          "Transcode all audio to AC-3.")("upmix",
-            po::value<bool>()->default_value(true),
+            po::value<bool>()->default_value(false),
             "Upmix stereo to 5.1.");
 
     po::options_description config_file{"Config file options"};
