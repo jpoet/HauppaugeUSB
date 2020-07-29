@@ -31,7 +31,7 @@ sudo apt-get install libboost-log-dev libboost-program-options-dev libusb-1.0-0-
 ```
 
 #### MythTV
-If you want to use this with MythTV, you will want [fixes/31](https://github.com/MythTV/mythtv/tree/fixes/31) or later.
+If you want to use this with MythTV, you will want [fixes/31](https://github.com/MythTV/mythtv/tree/fixes/31) or later for the best stability. It will work with earlier versions, but is not quite as solid.
 
 ### Grab the "driver" from Hauppauge
 ```
