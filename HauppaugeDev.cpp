@@ -885,7 +885,7 @@ void HauppaugeDev::audioMonitorLoop(void)
                      + std::chrono::milliseconds(2000);
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     NOTICELOG << "audioMonitorThread exiting";

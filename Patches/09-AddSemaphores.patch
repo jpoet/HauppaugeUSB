@@ -1,0 +1,358 @@
+diff -r -w -u a/Common/EncoderDev/HAPIHost/Hapi.cpp b/Common/EncoderDev/HAPIHost/Hapi.cpp
+--- a/Common/EncoderDev/HAPIHost/Hapi.cpp	2020-09-26 23:30:03.110202842 -0500
++++ b/Common/EncoderDev/HAPIHost/Hapi.cpp	2020-09-26 22:25:58.056384946 -0500
+@@ -27,6 +27,7 @@
+ #define INFINITE -1
+ //#endif
+ 
++#define USE_SEMAS 1
+ 
+ //#define USER_CMD_TIME_OUT 12000   // in milli second
+ DWORD USER_CMD_TIME_OUT = 5000;   //FGR - need to qualify this value better; smaller is better
+@@ -343,6 +344,16 @@
+ 		// check sendAndWaitQ
+ 		//===========================
+ 		//LOG_INFO(("take sendQSem\n"));
++#if USE_SEMAS
++		struct timespec ts;
++        clock_gettime(CLOCK_REALTIME, &ts);
++        ts.tv_nsec += (long)10 * 1000000L;
++        if (ts.tv_nsec >= 1000000000L) {
++            ts.tv_sec += ts.tv_nsec / 1000000000L;
++            ts.tv_nsec %= 1000000000L;
++        }
++		if (sem_timedwait(&hapi->sendAndWaitQueueSema, &ts) == 0) {
++#endif
+ 		err = UtilSemTakeDbg(hapi->sendAndWaitQueueSem, HCW_SEMA_DELAY, __LINE__);
+ 
+ 		//LOG_INFO(("ct check sendAndWaitQ...err=%d\n", err));
+@@ -414,6 +425,7 @@
+ 			UtilSemGive(hapi->sendAndWaitQueueSem);
+ 			//LOG_INFO(("ct sendAndWaitQSem given\n"));
+ 		}
++		}
+ 
+ 		// there is user cmd to send
+ 		if(toSend && item != NULL)
+@@ -474,6 +486,9 @@
+ 		// check sendQ
+ 		//===========================
+ 		//LOG_INFO(("take sendQSem\n"));
++#if USE_SEMAS
++		if (sem_trywait(&hapi->sendQueueSema)) {
++#endif
+ 		err = UtilSemTakeDbg(hapi->sendQueueSem, HCW_SEMA_DELAY, __LINE__);
+ 
+ 		//LOG_INFO(("ct check sendQ...\n"));
+@@ -498,6 +513,9 @@
+ 			UtilSemGive(hapi->sendQueueSem);
+ 			//LOG_INFO(("give sendQSem\n"));
+ 		}
++#if USE_SEMAS
++		}
++#endif
+ 
+ 		// there is nowait msg to send
+ 		if(toSend && item != NULL)
+@@ -826,6 +844,7 @@
+                     MemFree2Heap(__FILE__, __LINE__, receiveBuffer); 
+                 }            
+ 				UtilSemGive(hapi->receiveQueueSem);
++				sem_post(&hapi->receiveQueueSema);
+ 			}
+             bAnySuccess = TRUE;
+ 		}
+@@ -888,6 +907,9 @@
+ 		//===========================
+ 		// check sendQ
+ 		//===========================
++#if USE_SEMAS
++		if (sem_trywait(&hapi->sendQueueSema)) {
++#endif
+ 		err = UtilSemTakeDbg(hapi->sendQueueSem, HCW_SEMA_DELAY, __LINE__);
+ 
+ 		//LOG_INFO(("dt check send q \n"));
+@@ -910,6 +932,9 @@
+ 
+ 		if(err == DX_SUCCESS)
+ 			UtilSemGive(hapi->sendQueueSem);
++#if USE_SEMAS
++		}
++#endif
+ 
+ 		// there are msg to send
+ 		if(toSend && item != NULL)
+@@ -1178,6 +1203,7 @@
+                 }
+                 receiveBuffer = NULL;
+ 				UtilSemGive(hapi->receiveQueueSem);
++				sem_post(&hapi->receiveQueueSema);
+ 			}
+ 
+             bAnySuccess = TRUE;
+@@ -1236,6 +1262,18 @@
+ 		// check receive queue
+ 		//==================
+ 
++#if USE_SEMAS
++		struct timespec ts;
++        clock_gettime(CLOCK_REALTIME, &ts);
++        ts.tv_nsec += (long)30 * 1000000L;
++        if (ts.tv_nsec >= 1000000000L) {
++            ts.tv_sec += ts.tv_nsec / 1000000000L;
++            ts.tv_nsec %= 1000000000L;
++        }
++		if (sem_timedwait(&hapi->receiveQueueSema, &ts) != 0) {
++			continue;
++		}
++#endif
+ 		err = UtilSemTakeDbg(hapi->receiveQueueSem, HCW_SEMA_DELAY, __LINE__);
+ 		if(err != DX_SUCCESS)
+ 		{
+@@ -1437,6 +1475,9 @@
+                     pInput = NULL;
+                 }
+ 				UtilSemGive(hapi->sendQueueSem);
++#if USE_SEMAS
++				sem_post(&hapi->sendQueueSema);
++#endif
+ 			}
+ 			
+ 		}
+@@ -1879,6 +1920,10 @@
+ 	DbgLogInfo(("hapi->sendQueueSem = %p\n", hapi->sendQueueSem));
+ 	UtilSemGive(hapi->sendQueueSem);
+ 
++	sem_init(&hapi->sendQueueSema, 0, 0);
++	sem_init(&hapi->sendAndWaitQueueSema, 0, 0);
++	sem_init(&hapi->receiveQueueSema, 0, 0);
++
+ 	UtilSemCreate(&hapi->sendAndWaitQueueSem);
+ 	DbgLogInfo(("hapi->sendAndWaitQueueSem = %p\n", hapi->sendAndWaitQueueSem));
+ 	UtilSemGive(hapi->sendAndWaitQueueSem);
+@@ -2104,6 +2149,9 @@
+ 	    return HAPI_FAIL;
+ 	}    
+ 	UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 	
+ 	// wait for response
+ 	err = UtilSemTakeDbg(handle->userCmdSem,USER_CMD_TIME_OUT + 500, __LINE__); // 
+@@ -2153,6 +2201,9 @@
+         return HAPI_FAIL;
+     }    
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+ 	// wait for response
+ #ifdef HAUPPAUGE
+@@ -2212,6 +2263,9 @@
+     }    
+ 
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+ 	// wait for response
+ #ifdef HAUPPAUGE
+@@ -2269,6 +2323,9 @@
+         return HAPI_FAIL;
+     }    
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+ 	// wait for response
+ #ifdef HAUPPAUGE
+@@ -2328,6 +2385,9 @@
+     }    
+ 
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+     // wait for response
+ #ifdef HAUPPAUGE
+@@ -2416,6 +2476,9 @@
+     }    
+ 
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 	// wait for response
+ #ifdef HAUPPAUGE
+ 	//FGR - INFINITE is just too long; if the FW dies, we die, forever ...
+@@ -2475,6 +2538,9 @@
+     }    
+ 
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+ 	// wait for response
+ #ifdef HAUPPAUGE
+@@ -2523,6 +2589,9 @@
+         return HAPI_FAIL;
+     }
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 	
+ 	// wait for response
+     err = UtilSemTakeDbg(handle->userCmdSem,USER_CMD_TIME_OUT + 500, __LINE__);
+@@ -2575,6 +2644,9 @@
+         return HAPI_FAIL;
+     }
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+     
+ 	// wait for response
+ #ifdef HAUPPAUGE
+@@ -2628,6 +2700,9 @@
+         return HAPI_FAIL;
+     }
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+     // wait for response
+ #ifdef HAUPPAUGE
+@@ -2690,6 +2765,9 @@
+     UtilSemTakeDbg(handle->sendAndWaitQueueSem, INFINITE, __LINE__);
+     HAPIEnQueue(handle->sendAndWaitQueue, (QueueItem)msg);
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+ 	// wait for response
+ #ifdef HAUPPAUGE
+@@ -2735,6 +2813,9 @@
+     UtilSemTakeDbg(handle->sendAndWaitQueueSem, INFINITE, __LINE__);
+     HAPIEnQueue(handle->sendAndWaitQueue, (QueueItem)msg);
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+ 	// wait for response
+ #ifdef HAUPPAUGE
+@@ -2778,6 +2859,9 @@
+     UtilSemTakeDbg(handle->sendAndWaitQueueSem, INFINITE, __LINE__);
+     HAPIEnQueue(handle->sendAndWaitQueue, (QueueItem)msg);
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+ 	// wait for response
+ #ifdef HAUPPAUGE
+@@ -2942,6 +3026,9 @@
+         return HAPI_FAIL;
+     }
+     UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+     // wait for response
+ #ifdef HAUPPAUGE
+@@ -3052,6 +3139,9 @@
+ 			return HAPI_FAIL;
+ 		}
+ 		UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++		sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 	
+ 		// wait for response
+ 		err = UtilSemTakeDbg(handle->userCmdSem,USER_CMD_TIME_OUT + 500, __LINE__);
+@@ -3105,6 +3195,9 @@
+ 		return HAPI_FAIL;
+ 	}
+ 	UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 	
+ 	// wait for response
+ 	err = UtilSemTakeDbg(handle->userCmdSem,USER_CMD_TIME_OUT + 500, __LINE__);
+@@ -3171,6 +3264,9 @@
+ 		return HAPI_FAIL;
+ 	}
+ 	UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 
+ 	// wait for response
+ 	err = UtilSemTakeDbg(handle->userCmdSem,USER_CMD_TIME_OUT + 500, __LINE__);
+@@ -3233,6 +3329,9 @@
+ 		return HAPI_FAIL;
+ 	}
+ 	UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++	sem_post(&handle->sendAndWaitQueueSema);
++#endif
+ 	
+ 	// wait for response
+ 	err = UtilSemTakeDbg(handle->userCmdSem,USER_CMD_TIME_OUT + 500, __LINE__);
+@@ -3330,6 +3429,9 @@
+ 		goto clean_up;//FGR Bugfix
+ 	}
+ 	UtilSemGive(handle->sendAndWaitQueueSem);
++#if USE_SEMAS
++		sem_post(&hapi->sendAndWaitQueueSema);
++#endif
+ 
+ 	// wait for response
+ 	err = UtilSemTakeDbg(handle->userCmdSem,4000, __LINE__);
+@@ -3404,6 +3506,10 @@
+ 	//UtilSemDestroy(&handle->waitResponseQueueSem);
+ 	UtilSemDestroy(&handle->cbQueueSem);
+ 
++	sem_destroy(&handle->sendQueueSema);
++	sem_destroy(&handle->sendAndWaitQueueSema);
++	sem_destroy(&handle->receiveQueueSema);
++
+ 
+     handle->cmdBus->IF.exit(handle->cmdBus->device);
+ 
+Only in b/Common/EncoderDev/HAPIHost: Hapi.cpp.async1
+diff -r -w -u a/Common/EncoderDev/HAPIHost/Hapi_priv.h b/Common/EncoderDev/HAPIHost/Hapi_priv.h
+--- a/Common/EncoderDev/HAPIHost/Hapi_priv.h	2016-09-26 15:35:49.000000000 -0500
++++ b/Common/EncoderDev/HAPIHost/Hapi_priv.h	2020-09-26 22:20:59.708399075 -0500
+@@ -18,6 +18,8 @@
+ #include "Queue.h"
+ #include "HapiMsg.h"
+ 
++#include <semaphore.h>
++
+ #ifdef  __cplusplus
+ extern  "C"
+ {
+@@ -90,6 +92,10 @@
+        
+ 	HAPI_STATE state;
+ 	
++	sem_t sendQueueSema;
++	sem_t sendAndWaitQueueSema;
++	sem_t receiveQueueSema;
++	
+ }HAPIStruct;
+ 
+ typedef HAPIStruct * HAPIHandler;
+Only in a/Common/Rx/ADV7842: Wrapper.c
