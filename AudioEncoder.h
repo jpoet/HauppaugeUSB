@@ -15,7 +15,7 @@ class AudioEncoder
   private:
     AVCodecID m_codecId;
     AVCodecContext * m_aContext;
-    AVPacket m_pkt;
+    AVPacket * m_pkt;
 
     AudioEncoder();
     ~AudioEncoder();

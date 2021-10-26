@@ -44,7 +44,7 @@ class StreamBuffer
     bool m_initialized;
     int m_pmtVersion;
 
-    AVPacket m_pkt;
+    AVPacket *m_pkt;
 
     bool m_isErrored;
 

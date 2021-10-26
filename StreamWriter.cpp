@@ -52,6 +52,7 @@ StreamWriter::~StreamWriter()
     if (m_oAVFContext)
     {
         avformat_free_context(m_oAVFContext);
+        m_oAVFContext = nullptr;
     }
 }
 
@@ -95,6 +96,7 @@ void StreamWriter::Reset()
     if (m_oAVFContext)
     {
         avformat_free_context(m_oAVFContext);
+        m_oAVFContext = nullptr;
     }
 
     if (!m_filename.empty() || m_cb)

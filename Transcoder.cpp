@@ -133,11 +133,10 @@ void Transcoder::HandleAudioPacket(AVPacket * pkt)
         // Init audioDecoder
         delete m_audioDecoder;
         m_audioDecoder = new AudioDecoder();
-        WARNLOG << "Initing audioDecoder with codec: "
-                 << avcodec_descriptor_get(m_streamBuffer->m_iAVFContext
-                                               ->streams[pkt->stream_index]
-                                               ->codecpar->codec_id)
-                        ->name;
+        INFOLOG << "Initing audioDecoder with codec: "
+                << avcodec_descriptor_get(m_streamBuffer->m_iAVFContext
+                                          ->streams[pkt->stream_index]
+                                          ->codecpar->codec_id)->name;
         if (!m_audioDecoder->InitDecoder(
                 m_streamBuffer->m_iAVFContext,
                 m_streamBuffer->m_iAVFContext->streams[pkt->stream_index]

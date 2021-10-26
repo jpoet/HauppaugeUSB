@@ -59,8 +59,14 @@ AVPacket * AudioEncoder::GetNextPacket()
 {
     int ret;
 
-    av_init_packet(&m_pkt);
-    ret = avcodec_receive_packet(m_aContext, &m_pkt);
+    m_pkt = av_packet_alloc();
+    if (m_pkt == nullptr)
+    {
+        ERRORLOG << "AudioEncoder::GetNextPacket av_packet_alloc failed";
+        return nullptr;
+    }
+
+    ret = avcodec_receive_packet(m_aContext, m_pkt);
     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
     {
         DEBUGLOG << "Nothing to do right now";
@@ -72,12 +78,12 @@ AVPacket * AudioEncoder::GetNextPacket()
         return nullptr;
     }
 
-    m_pkt.stream_index = 1;
+    m_pkt->stream_index = 1;
 
-    return &m_pkt;
+    return m_pkt;
 }
 
 void AudioEncoder::ReleasePacket(AVPacket * pkt)
 {
-    av_packet_unref(pkt);
+    av_packet_free(&pkt);
 }

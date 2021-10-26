@@ -279,19 +279,24 @@ AVPacket * StreamBuffer::Flush()
     if (!m_initialized)
         return nullptr;
 
-    av_init_packet(&m_pkt);
+    m_pkt = av_packet_alloc();
+    if (m_pkt == nullptr)
+    {
+        ERRORLOG << "StreamBuffer:Flush: av_packet_alloc failed";
+        return nullptr;
+    }
 
     // If no more packets, return null
-    if ((ret = av_read_frame(m_iAVFContext, &m_pkt)) < 0)
+    if ((ret = av_read_frame(m_iAVFContext, m_pkt)) < 0)
         return nullptr;
 
     // If a pmt change, don't bother, just return null
     if (m_iAVFContext->programs[0]->pmt_version != m_pmtVersion)
         return nullptr;
 
-    log_packet(m_iAVFContext, &m_pkt, "in");
+    log_packet(m_iAVFContext, m_pkt, "in");
 
-    return &m_pkt;
+    return m_pkt;
 }
 
 AVPacket * StreamBuffer::GetNextPacket(bool flush)
@@ -301,7 +306,12 @@ AVPacket * StreamBuffer::GetNextPacket(bool flush)
     if (m_bytesBuffered < (flush ? AVBUFSIZE : AVBUFSIZE * 2))
         return nullptr;
 
-    av_init_packet(&m_pkt);
+    m_pkt = av_packet_alloc();
+    if (m_pkt == nullptr)
+    {
+        ERRORLOG << "StreamBuffer:GetNextPacket: av_packet_alloc failed";
+        return nullptr;
+    }
 
     if (!m_initialized)
     {
@@ -329,7 +339,7 @@ AVPacket * StreamBuffer::GetNextPacket(bool flush)
         m_initialized = true;
     }
 
-    if ((ret = av_read_frame(m_iAVFContext, &m_pkt)) < 0)
+    if ((ret = av_read_frame(m_iAVFContext, m_pkt)) < 0)
     {
         if (ret == -EAGAIN)
             DEBUGLOG << "Demuxer returned EAGAIN";
@@ -348,12 +358,12 @@ AVPacket * StreamBuffer::GetNextPacket(bool flush)
         m_pmtVersion = m_iAVFContext->programs[0]->pmt_version;
     }
 
-    log_packet(m_iAVFContext, &m_pkt, "in");
+    log_packet(m_iAVFContext, m_pkt, "in");
 
-    return &m_pkt;
+    return m_pkt;
 }
 
-void StreamBuffer::ReleasePacket(AVPacket * packet)
+void StreamBuffer::ReleasePacket(AVPacket * pkt)
 {
-    av_packet_unref(packet);
+    av_packet_free(&pkt);
 }
