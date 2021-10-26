@@ -5,6 +5,7 @@
 
 extern "C" {
 #include <libavutil/timestamp.h>
+#include <libavutil/channel_layout.h>
 }
 
 extern "C" int staticWriteBuffer(void * ctx, uint8_t * buf, int buf_size)
@@ -65,7 +66,7 @@ static void log_packet(const AVFormatContext * fmt_ctx, const AVPacket * pkt,
     char buf5[64];
     char buf6[64];
 
-    AVCodec * codec = avcodec_find_decoder(
+    const AVCodec * codec = avcodec_find_decoder(
         fmt_ctx->streams[pkt->stream_index]->codecpar->codec_id);
 
     DEBUGLOG << tag << ": pts:" << av_ts_make_string(buf1, pkt->pts)

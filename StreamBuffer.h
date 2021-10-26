@@ -37,7 +37,7 @@ class StreamBuffer
     volatile block_t * m_head;            // The oldest buffered block.
     volatile block_t * volatile * m_tail; // The newest buffered block.
 
-    AVInputFormat * m_iFormat;
+    const AVInputFormat * m_iFormat;
     AVIOContext * m_avioContext;
     AVFormatContext * m_iAVFContext;
 

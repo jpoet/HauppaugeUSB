@@ -1,6 +1,10 @@
 #include "AudioBuffer.h"
 #include "Logger.h"
 
+extern "C" {
+#include <libavutil/channel_layout.h>
+}
+
 #define MINUS3DB (1.0 / 1.414213)
 
 AudioBuffer::AudioBuffer(bool upmix2to51)

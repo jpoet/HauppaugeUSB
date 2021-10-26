@@ -1,12 +1,16 @@
 #include "AudioEncoder.h"
 #include "Logger.h"
 
+extern "C" {
+#include <libavutil/channel_layout.h>
+}
+
 AudioEncoder::AudioEncoder()
 : m_codecId(AV_CODEC_ID_NONE)
 , m_aContext(nullptr)
 {
     // Find the AC3 encoder
-    AVCodec * ac3encoder = avcodec_find_encoder(AV_CODEC_ID_AC3);
+    const AVCodec * ac3encoder = avcodec_find_encoder(AV_CODEC_ID_AC3);
     if (!ac3encoder)
     {
         ERRORLOG << "Unable to find encoder AC3";

@@ -23,7 +23,7 @@ bool AudioDecoder::InitDecoder(AVFormatContext * avFormatContext,
 {
     int ret;
 
-    AVCodec * codec = avcodec_find_decoder(codecParams->codec_id);
+    const AVCodec * codec = avcodec_find_decoder(codecParams->codec_id);
     m_aContext = avcodec_alloc_context3(codec);
 
     avcodec_parameters_to_context(m_aContext, codecParams);

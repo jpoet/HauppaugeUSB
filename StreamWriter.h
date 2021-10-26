@@ -22,7 +22,7 @@ class StreamWriter
     DataTransfer::callback_t * m_cb;
     AVFormatContext * m_oAVFContext;
     AVIOContext * m_avioContext;
-    AVOutputFormat * m_oFormat;
+    const AVOutputFormat * m_oFormat;
     bool m_initialized;
     int m_fd;
     bool m_paused;
