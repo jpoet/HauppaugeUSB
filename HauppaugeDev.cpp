@@ -170,18 +170,24 @@ bool HauppaugeDev::set_audio_format(encoderAudioInFormat_t audioFormat)
         {
             case HAPI_AUDIO_CAPTURE_SOURCE_HDMI:
             {
-                if (set_digital_audio(false) && audioFormat == ENCAIF_AC3)
+                if (set_digital_audio(false))
                 {
-                    m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
-                    INFOLOG << "'SPDIF' from HDMI via 8416";
+                    // Device has a CS8416 chip
+                    if (audioFormat == ENCAIF_AC3)
+                    {
+                        m_fx2->setPortStateBits(FX2_PORT_E, 0x10, 0x00);
+                        INFOLOG << "'SPDIF' from HDMI via 8416";
+                    }
+                    else
+                    {
+                        m_fx2->setPortStateBits(FX2_PORT_E, 0x00, 0x00);
+                        INFOLOG << "I2S audio from ADV7842";
+                    }
                 }
                 else
                 {
-#if 0               // Fred says this is wrong
+                    // Older device without CS8416
                     m_fx2->setPortStateBits(FX2_PORT_E, 0, 0x18);
-#else
-                    m_fx2->setPortStateBits(FX2_PORT_E, 0x00, 0x00);
-#endif
                     INFOLOG << "I2S audio from ADV7842";
                 }
                 INFOLOG << "Audio Input: HDMI";

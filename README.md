@@ -1,3 +1,6 @@
+#!/usr/bin/env -S retext --preview
+
+[//]: # (Install retext from your distribution then ./README.md will look prettier.)
 
 # MythTV Hauppauge HD-PVR2 / Colossus2 support
 
