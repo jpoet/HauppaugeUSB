@@ -51,6 +51,7 @@ void InitInterruptHandler(void)
     sigset_t ss;
     sigemptyset(&ss);
     sigaddset(&ss, SIGINT);
+    sigaddset(&ss, SIGPIPE);
     pthread_sigmask(SIG_BLOCK, &ss, NULL);
 }
 
@@ -59,6 +60,7 @@ static int evtWait()
     sigset_t ss;
     sigemptyset(&ss);
     sigaddset(&ss, SIGINT);
+    sigaddset(&ss, SIGPIPE);
     int s;
     if (sigwait(&ss, &s) != 0)
         return 0;
