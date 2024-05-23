@@ -1,8 +1,9 @@
 #!/usr/bin/env -S retext --preview
-
 [//]: # (Install retext from your distribution then ./README.md will look prettier.)
 
 # MythTV Hauppauge HD-PVR2 / Colossus2 support
+
+NOTE: I no longer own one of these cards and therefore cannot continue development. Hopefully someone else will take up this probject.
 
 A wrapper around the Hauppauge HDPVR2/Colossus2 Linux "[driver](http://www.hauppauge.com/site/support/linux.html?#tabs-3)"
 
