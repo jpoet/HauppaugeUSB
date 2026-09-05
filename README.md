@@ -3,8 +3,9 @@
 
 # MythTV Hauppauge HD-PVR2 / Colossus2 support
 
-# NOTE: I no longer own one of these cards and therefore cannot continue development. Hopefully someone else will take up this probject.
+### NOTE: I no longer own one of these cards and therefore cannot continue development. Dave Pearson has forked this repository and is actively maintaining it here https://github.com/davepearson1628/HauppaugeUSB
 
+## Overview
 A wrapper around the Hauppauge HDPVR2/Colossus2 Linux "[driver](http://www.hauppauge.com/site/support/linux.html?#tabs-3)"
 
 This is currently beta quality, based on an alpha quality driver.  That
